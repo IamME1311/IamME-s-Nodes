@@ -48,9 +48,38 @@ class AspectEmptyLatentImage:
         return ({"samples":latent}, )
 
 
+class LiveTextEditor:
+    
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required" : {
+                    "text":("STRING", {"forceInput": True})
+                    # "clip" : ("CLIP")
+            }
+        }
 
+    # RETURN_TYPES = ("CONDITIONING",)
+    INPUT_IS_LIST = True
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "TextEditor"
+    OUTPUT_NODE = True
+    CATEGORY = "IamME"
 
+    def TextEditor(self, text):
+        print(type(text))
+        return ({"text":(text[0]["text"][0],)},)
+        # return ("ui": {"text": text}, "result": (text,))
 
+    # def TextEditor(self, text, clip):
+        
+    #     text_final = text
+        
+    #     # encoding
+    #     tokens = clip.tokenize(text_final)
+    #     output = clip.encode_from_tokens(tokens, return_pooled=True, return_dict=True)
+    #     cond = output.pop("cond")
+    #     return ([[cond, output]], )
 
 
 
@@ -68,10 +97,12 @@ class AspectEmptyLatentImage:
 
 
 NODE_CLASS_MAPPINGS = {
-    "AspectLatentImage" : AspectEmptyLatentImage
+    "AspectLatentImage" : AspectEmptyLatentImage,
+    "LiveTextEditor": LiveTextEditor
 }
 
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "AspectLatentImage" : "Aspect Empty Latent Image"
+    "AspectLatentImage" : "Aspect Empty Latent Image",
+    "LiveTextEditor" : "LiveTextEditor"
 }
