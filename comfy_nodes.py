@@ -1,5 +1,6 @@
 import comfy
 import torch
+import math
 
 MAX_RESOLUTION = 16384
 
@@ -14,38 +15,50 @@ class AspectEmptyLatentImage:
                 "width": ("INT", {"default":1024, "min":16, "max":MAX_RESOLUTION, "step":8}),
                 "height": ("INT", {"default":1024, "min":16, "max":MAX_RESOLUTION, "step":8}),
                 "aspect_control" : ("BOOLEAN", {"default":False, "tooltip":"Set to 'True' if you want to select size based on a particular aspect ratio."}),
+                "model_type":(["SD1.5", "SDXL"],),
                 "aspect_width_ratio" : ("INT",{"default":9, "min":0}),
                 "aspect_height_ratio" : ("INT",{"default":16, "min":0}),
                 "width_override": ("INT", {"default": 0, "min": 0, "max": MAX_RESOLUTION, "step": 8}),
                 "batch_size": ("INT", {"default": 1, "min": 1, "max": 4096, "tooltip": "The number of latent images in the batch."})
             }
         }
-    RETURN_TYPES = ("LATENT",)
+    RETURN_TYPES = ("LATENT", "INT", "INT")
+    RETURN_NAMES = ("samples","width","height",)
     OUTPUT_TOOLTIPS = ("The empty latent image batch.",)
     FUNCTION = "aspect_latent_gen"
 
     CATEGORY = "IamME"
     DESCRIPTION = "Create a new batch of empty latent images to be denoised via sampling."
 
-    def aspect_latent_gen(self, width, height, aspect_control, aspect_width_ratio, aspect_height_ratio, width_override, batch_size=1):
+    def aspect_latent_gen(self, width, height, model_type, aspect_control, aspect_width_ratio, aspect_height_ratio, width_override, batch_size=1):
         if aspect_control==True:
             if width_override > 0:
-                width_final = width_override
-                height_final = int((aspect_height_ratio * width) / aspect_width_ratio)
+                width = width_override - (width_override%8)
+                height = int((aspect_height_ratio * width) / aspect_width_ratio)
+                height = height - (height%8)
             else:
-                base_size = 1024
-                if aspect_width_ratio <= aspect_height_ratio:
-                    width_final = base_size
-                    height_final = int((aspect_height_ratio * width) / aspect_width_ratio)
-                else:
-                    height_final = base_size
-                    width_final = int((aspect_width_ratio * height) / aspect_height_ratio)
+                total_pixels = {
+                    "SD1.5" : 512 * 512,
+                    "SDXL" : 1024 * 1024
+                }
+                pixels = total_pixels.get(model_type, 0)
+
+                aspect_ratio_value = aspect_width_ratio / aspect_height_ratio
+
+                width = int(math.sqrt(pixels * aspect_ratio_value))
+                height = int(pixels / width)
+
         else:
-            width_final = int(width)
-            height_final = int(height)
+            width = int(width - (width%8))
+            height = int(height - (height%8))
     
-        latent = torch.zeros([batch_size, 4, height_final // 8, width_final // 8], device=self.device)
-        return ({"samples":latent}, )
+        latent = torch.zeros([batch_size, 4, height // 8, width // 8], device=self.device)
+        return {"ui":{
+                    "text": [f"{height}x{width}"]
+                }, 
+                "result":
+                    ({"samples":latent}, width, height)
+            }
 
 
 class LiveTextEditor:
@@ -54,9 +67,13 @@ class LiveTextEditor:
     def INPUT_TYPES(s):
         return {
             "required" : {
-                    "text":("STRING", {"forceInput": True})
+                    "text":("STRING", {"forceInput": True}),
                     # "clip" : ("CLIP")
-            }
+            },
+            "hidden": {
+                "unique_id": "UNIQUE_ID",
+                "extra_pnginfo": "EXTRA_PNGINFO",
+            },
         }
 
     # RETURN_TYPES = ("CONDITIONING",)
@@ -64,12 +81,28 @@ class LiveTextEditor:
     RETURN_TYPES = ("STRING",)
     FUNCTION = "TextEditor"
     OUTPUT_NODE = True
+    OUTPUT_IS_LIST = (True,)
     CATEGORY = "IamME"
 
-    def TextEditor(self, text):
-        print(type(text))
-        return ({"text":(text[0]["text"][0],)},)
-        # return ("ui": {"text": text}, "result": (text,))
+    def TextEditor(self, text, unique_id=None, extra_pnginfo=None):
+        if unique_id is not None and extra_pnginfo is not None:
+            if not isinstance(extra_pnginfo, list):
+                print("Error: extra_pnginfo is not a list")
+            elif (
+                not isinstance(extra_pnginfo[0], dict)
+                or "workflow" not in extra_pnginfo[0]
+            ):
+                print("Error: extra_pnginfo[0] is not a dict or missing 'workflow' key")
+            else:
+                workflow = extra_pnginfo[0]["workflow"]
+                node = next(
+                    (x for x in workflow["nodes"] if str(x["id"]) == str(unique_id[0])),
+                    None,
+                )
+                if node:
+                    node["widgets_values"] = [text]
+
+        return {"ui": {"text": text}, "result": (text,)}
 
     # def TextEditor(self, text, clip):
         
@@ -97,12 +130,12 @@ class LiveTextEditor:
 
 
 NODE_CLASS_MAPPINGS = {
-    "AspectLatentImage" : AspectEmptyLatentImage,
+    "AspectEmptyLatentImage" : AspectEmptyLatentImage,
     "LiveTextEditor": LiveTextEditor
 }
 
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "AspectLatentImage" : "Aspect Empty Latent Image",
+    "AspectEmptyLatentImage" : "AspectEmptyLatentImage",
     "LiveTextEditor" : "LiveTextEditor"
 }
