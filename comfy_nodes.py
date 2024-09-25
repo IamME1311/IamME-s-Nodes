@@ -67,23 +67,21 @@ class LiveTextEditor:
         return {
             "required" : {
                     "text":("STRING", {"forceInput": True}),
-                    # "clip" : ("CLIP")
+                    "modify_text":("STRING", {"multiline":True, "default":""}),
             },
             "hidden": {
                 "unique_id": "UNIQUE_ID",
                 "extra_pnginfo": "EXTRA_PNGINFO",
             },
         }
-
-    # RETURN_TYPES = ("CONDITIONING",)
+    
     INPUT_IS_LIST = True
     RETURN_TYPES = ("STRING",)
     FUNCTION = "TextEditor"
     OUTPUT_NODE = True
-    OUTPUT_IS_LIST = (True,)
     CATEGORY = "IamME"
 
-    def TextEditor(self, text, unique_id=None, extra_pnginfo=None):
+    def TextEditor(self, text, modify_text="", unique_id=None, extra_pnginfo=None):
         if unique_id is not None and extra_pnginfo is not None:
             if not isinstance(extra_pnginfo, list):
                 print("Error: extra_pnginfo is not a list")
@@ -101,43 +99,50 @@ class LiveTextEditor:
                 if node:
                     node["widgets_values"] = [text]
 
-        return {"ui": {"text": text}, "result": (text,)}
 
-    # def TextEditor(self, text, clip):
+        if modify_text[0]:
+            out_text = modify_text[0]
+        else:
+            out_text = text[0]
         
-    #     text_final = text
+        # print("out_text", type(out_text), out_text)
+        # encoded_text = LiveTextEditor.TextEncoder(clip, out_text)
+
+        return {"ui": {"text": text}, "result": (out_text,)}
+
+    # def TextEncoder(clip, text_to_encode):
         
+    #     print(text_to_encode, " ",type(text_to_encode))
     #     # encoding
-    #     tokens = clip.tokenize(text_final)
+    #     tokens = clip.tokenize(text_to_encode)
     #     output = clip.encode_from_tokens(tokens, return_pooled=True, return_dict=True)
     #     cond = output.pop("cond")
     #     return ([[cond, output]], )
 
 
-class ImageLivePreview:
+# class ImageLivePreview:
 
-    @classmethod
-    def INPUT_TYPES(self):
-        return {
-            "required": {
-                "image": ("IMAGE", ),
-            },
-            "hidden": {
-                "unique_id": "UNIQUE_ID",
-                "extra_pnginfo": "EXTRA_PNGINFO",
-            },
-        }
+#     @classmethod
+#     def INPUT_TYPES(self):
+#         return {
+#             "required": {
+#                 "image": ("IMAGE", ),
+#             },
+#             "hidden": {
+#                 "unique_id": "UNIQUE_ID",
+#                 "extra_pnginfo": "EXTRA_PNGINFO",
+#             },
+#         }
 
-    RETURN_TYPES = ("IMAGE",)
-    RETURN_NAMES = ("image",)
-    OUTPUT_NODE = True
-    FUNCTION = 'blend_image'
-    CATEGORY = 'IamME'
+#     RETURN_TYPES = ()
+#     OUTPUT_NODE = True
+#     FUNCTION = 'blend_preview'
+#     CATEGORY = 'IamME'
 
-    def blend_preview(self, image, unique_id=None, extra_pnginfo=None):
+#     def blend_preview(self, image, unique_id=None, extra_pnginfo=None):
         
-        return {"ui":{"image":image},
-                "result" : image}
+#         return {"ui":{"image":image},
+#                 "result" : image}
 
 
 
@@ -156,12 +161,12 @@ class ImageLivePreview:
 NODE_CLASS_MAPPINGS = {
     "AspectEmptyLatentImage" : AspectEmptyLatentImage,
     "LiveTextEditor": LiveTextEditor, 
-    "ImageLivePreview":ImageLivePreview
+    # "ImageLivePreview":ImageLivePreview
 }
 
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "AspectEmptyLatentImage" : "AspectEmptyLatentImage",
     "LiveTextEditor" : "LiveTextEditor",
-    "ImageLivePreview":"ImageLivePreview"
+    # "ImageLivePreview":"ImageLivePreview"
 }

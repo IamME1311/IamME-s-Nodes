@@ -1,5 +1,34 @@
 import { app } from "../../scripts/app.js";
-import { recursiveLinkUpstream } from "./utils.js"
+import { ComfyWidgets } from "../../scripts/widgets.js";
+
+
+// function recursiveLinkUpstream(node, type, depth, index=null) {
+// 	depth += 1
+// 	let connections = []
+// 	const inputList = (index !== null) ? [index] : [...Array(node.inputs.length).keys()]
+// 	if (inputList.length === 0) { return }
+// 	for (let i of inputList) {
+// 		const link = node.inputs[i].link
+// 		if (link) {
+// 			const nodeID = node.graph.links[link].origin_id
+// 			const slotID = node.graph.links[link].origin_slot
+// 			const connectedNode = node.graph._nodes_by_id[nodeID]
+
+// 			if (connectedNode.outputs[slotID].type === type) {
+
+// 				connections.push([connectedNode.id, depth])
+
+// 				if (connectedNode.inputs) {
+// 					const index = (connectedNode.type === "LatentComposite") ? 0 : null
+// 					connections = connections.concat(recursiveLinkUpstream(connectedNode, type, depth, index))
+// 				} else {
+					
+// 				}
+// 			}
+// 		}
+// 	}
+// 	return connections
+// }
 
 app.registerExtension({
 	name: "IamMEsNodes.nodes_js",
@@ -26,34 +55,83 @@ app.registerExtension({
                 }
                 break;
 
-            case "ImageLivePreview":
-                const onImageLivePreviewConnectInput = nodeType.prototype.onConnectInput;
-                const inputList = (index !== null) ? [index] : [...Array(node.inputs.length).keys()]
-                if (inputList.length === 0) { return }
-        
-                for (let i of inputList) {
-                    const connectedNodes = recursiveLinkUpstream(node, node.inputs[i].type, 0, i)
-                    
-                    if (connectedNodes.length !== 0) {
-                        for (let [node_ID, depth] of connectedNodes) {
-                            const connectedNode = node.graph._nodes_by_id[node_ID]
-        
-                            if (connectedNode.type !== "ImageLivePreview") {
-        
-                                const [endWidth, endHeight] = getSizeFromNode(connectedNode)
-        
-                                if (endWidth && endHeight) {
-                                    if (i === 0) {
-                                        node.sampleToID = connectedNode.id
-                                    } else {
-                                        node.properties["values"][i-1][3] = connectedNode.id
-                                    }
-                                    break
-                                }
-                            }
+
+            case "LiveTextEditor":
+                function populate(text) {
+                    if (this.widgets) {
+                        for (let i = 2; i < this.widgets.length; i++) {
+                            this.widgets[i].onRemove?.();
                         }
+                        this.widgets.length = 2;
                     }
+                    
+                    const v = [...text];
+                    if (!v[0]) {
+                        v.shift();
+                    }
+                    for (const list of v) {
+                        const w = ComfyWidgets["STRING"](this, "text2", ["STRING", { multiline: true }], app).widget;
+                        w.inputEl.readOnly = true;
+                        w.inputEl.style.opacity = 0.6;
+                        w.value = list;
+                    }
+    
+                    requestAnimationFrame(() => {
+                        const sz = this.computeSize();
+                        if (sz[0] < this.size[0]) {
+                            sz[0] = this.size[0];
+                        }
+                        if (sz[1] < this.size[1]) {
+                            sz[1] = this.size[1];
+                        }
+                        this.onResize?.(sz);
+                        app.graph.setDirtyCanvas(true, false);
+                    });
                 }
+    
+                // When the node is executed we will be sent the input text, display this in the widget
+                const onExecuted = nodeType.prototype.onExecuted;
+                nodeType.prototype.onExecuted = function (message) {
+                    onExecuted?.apply(this, arguments);
+                    populate.call(this, message.text);
+                };
+    
+                const onConfigure = nodeType.prototype.onConfigure;
+                nodeType.prototype.onConfigure = function () {
+                    onConfigure?.apply(this, arguments);
+                    if (this.widgets_values?.length) {
+                        populate.call(this, this.widgets_values.slice(+this.widgets_values.length > 1));
+                    }
+                };
+            
+            // case "ImageLivePreview":
+            //     const onImageLivePreviewConnectInput = nodeType.prototype.onConnectInput;
+            //     const inputList = (index !== null) ? [index] : [...Array(node.inputs.length).keys()]
+            //     if (inputList.length === 0) { return }
+        
+            //     for (let i of inputList) {
+            //         const connectedNodes = recursiveLinkUpstream(node, node.inputs[i].type, 0, i)
+                    
+            //         if (connectedNodes.length !== 0) {
+            //             for (let [node_ID, depth] of connectedNodes) {
+            //                 const connectedNode = node.graph._nodes_by_id[node_ID]
+        
+            //                 if (connectedNode.type !== "ImageLivePreview") {
+        
+            //                     const [endWidth, endHeight] = getSizeFromNode(connectedNode)
+        
+            //                     if (endWidth && endHeight) {
+            //                         if (i === 0) {
+            //                             node.sampleToID = connectedNode.id
+            //                         } else {
+            //                             node.properties["values"][i-1][3] = connectedNode.id
+            //                         }
+            //                         break
+            //                     }
+            //                 }
+            //             }
+            //         }
+            //     }
         }
     }
 });
