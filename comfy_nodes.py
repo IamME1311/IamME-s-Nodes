@@ -1,5 +1,6 @@
 import comfy
 import math
+import torch
 
 MAX_RESOLUTION = 16384
 
