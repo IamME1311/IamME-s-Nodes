@@ -5,8 +5,10 @@ import shutil
 import __main__
 
 
-__all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS', 'WEB_DIRECTORY']
+
 WEB_DIRECTORY = './js'
+__all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS', 'WEB_DIRECTORY']
+
 
 extentions_folder = os.path.join(os.path.dirname(os.path.realpath(__main__.__file__)),
                                  "web" + os.sep + "extensions" + os.sep + "IamMEsNodes")
