@@ -150,9 +150,11 @@ class LiveTextEditor:
 #         return {"ui":{"image":image},
 #                 "result" : image}
 
-def json_loader() -> dict:
+
+#Helper functions
+def json_loader(file_name:str) -> dict:
     cwd_name = os.path.dirname(__file__)
-    path_to_asset_file = os.path.join(cwd_name, "assets/FacePromptMaker.json")
+    path_to_asset_file = os.path.join(cwd_name, f"assets/{file_name}.json")
     with open(path_to_asset_file, "r") as f:
         asset_data = json.load(f)
     return asset_data
@@ -163,7 +165,8 @@ def apply_attention(text:str, weight:float) -> str:
 
 
 random_opt = "Randomize 🎲"
-option_dict = json_loader()
+option_dict = json_loader("FacePromptMaker")
+
 class FacePromptMaker:
 
     @classmethod
@@ -384,8 +387,34 @@ class FacePromptMaker:
             return(opt_append_this,)
         
 
+class TriggerWordProcessor:
+    
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "seed": ("INT", {"forceInput": True}),
+                "text_in": ("STRING", {"forceInput": True}),
+            }
+        }
 
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("processed_text",)
+    FUNCTION = 'TextProcessor'
+    CATEGORY = 'IamME'
 
+    def TextProcessor(self, seed, text_in):
+        options = json_loader("TriggerWords")
+        bg_options = options["background"]
+
+        #background
+        if "__background__" not in text_in:
+            raise ValidationErr("trigger word __background__ not found!!")
+        else:
+            bg_choice = random.choice(bg_options)
+            text_out = text_in.replace("__background__", bg_choice)
+
+        return (text_out,) 
 
 
 
@@ -398,16 +427,14 @@ class FacePromptMaker:
 NODE_CLASS_MAPPINGS = {
     "AspectEmptyLatentImage" : AspectEmptyLatentImage,
     "LiveTextEditor": LiveTextEditor,
-    "FacePromptMaker" : FacePromptMaker 
-    # "ImageLivePreview":ImageLivePreview
-    
+    "FacePromptMaker" : FacePromptMaker,
+    "TriggerWordProcessor" : TriggerWordProcessor   
 }
 
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "AspectEmptyLatentImage" : "AspectEmptyLatentImage",
     "LiveTextEditor" : "LiveTextEditor",
-    "FacePromptMaker": "FacePromptMaker"
-    # "ImageLivePreview":"ImageLivePreview"
-    
+    "FacePromptMaker": "FacePromptMaker",
+    "TriggerWordProcessor" : "TriggerWordProcessor"    
 }
