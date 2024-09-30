@@ -110,45 +110,41 @@ class LiveTextEditor:
             out_text = modify_text[0]
         else:
             out_text = text[0]
-        
-        # print("out_text", type(out_text), out_text)
-        # encoded_text = LiveTextEditor.TextEncoder(clip, out_text)
 
         return {"ui": {"text": text}, "result": (out_text,)}
 
-    # def TextEncoder(clip, text_to_encode):
+
+class TextTransformer:
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "text": ("STRING", {"forceInput":True}),
+                "prepend" : ("STRING", {"multiline":True, "default":""}), 
+                "append" : ("STRING", {"multiline":True, "default":""}),
+                "replace" : ("BOOLEAN", {"default" : False})
+            },
+            "optional": {
+                "to_replace" : ("STRING", {"default":""}),
+                "replace_with" : ("STRING", {"default":""}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("text",)
+    FUNCTION = 'texttransformer'
+    CATEGORY = 'IamME'
+
+    def texttransformer(self, text, replace, prepend="", append="", to_replace="", replace_with=""):
+        text = prepend + " " + text
+        text = text + " " + append
+
+        if replace:
+            text = text.replace(to_replace, replace_with)
+
         
-    #     print(text_to_encode, " ",type(text_to_encode))
-    #     # encoding
-    #     tokens = clip.tokenize(text_to_encode)
-    #     output = clip.encode_from_tokens(tokens, return_pooled=True, return_dict=True)
-    #     cond = output.pop("cond")
-    #     return ([[cond, output]], )
-
-
-# class ImageLivePreview:
-
-#     @classmethod
-#     def INPUT_TYPES(self):
-#         return {
-#             "required": {
-#                 "image": ("IMAGE", ),
-#             },
-#             "hidden": {
-#                 "unique_id": "UNIQUE_ID",
-#                 "extra_pnginfo": "EXTRA_PNGINFO",
-#             },
-#         }
-
-#     RETURN_TYPES = ()
-#     OUTPUT_NODE = True
-#     FUNCTION = 'blend_preview'
-#     CATEGORY = 'IamME'
-
-#     def blend_preview(self, image, unique_id=None, extra_pnginfo=None):
-        
-#         return {"ui":{"image":image},
-#                 "result" : image}
+        return (text,)
 
 
 #Helper functions
@@ -430,7 +426,8 @@ NODE_CLASS_MAPPINGS = {
     "AspectEmptyLatentImage" : AspectEmptyLatentImage,
     "LiveTextEditor": LiveTextEditor,
     "FacePromptMaker" : FacePromptMaker,
-    "TriggerWordProcessor" : TriggerWordProcessor   
+    "TriggerWordProcessor" : TriggerWordProcessor,
+    "BasicTextEditor" : TextTransformer   
 }
 
 
@@ -438,5 +435,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "AspectEmptyLatentImage" : "AspectEmptyLatentImage",
     "LiveTextEditor" : "LiveTextEditor",
     "FacePromptMaker": "FacePromptMaker",
-    "TriggerWordProcessor" : "TriggerWordProcessor"    
+    "TriggerWordProcessor" : "TriggerWordProcessor",
+    "BasicTextEditor" : "BasicTextEditor"    
 }
