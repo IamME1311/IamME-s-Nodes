@@ -413,8 +413,9 @@ class TriggerWordProcessor:
         else:
             bg_choice = random.choice(bg_options)
             text_out = text_in.replace("__background__", bg_choice)
+            text = [text_out]
 
-        return (text_out,) 
+        return {"ui": {"text": text}, "result": (text_out,)}
 
 
 

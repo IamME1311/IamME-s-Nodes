@@ -57,6 +57,7 @@ app.registerExtension({
 
 
             case "LiveTextEditor":
+            case "TriggerWordProcessor":
                 function populate(text) {
                     if (this.widgets) {
                         for (let i = 2; i < this.widgets.length; i++) {
@@ -103,35 +104,8 @@ app.registerExtension({
                         populate.call(this, this.widgets_values.slice(+this.widgets_values.length > 1));
                     }
                 };
+                       
             
-            // case "ImageLivePreview":
-            //     const onImageLivePreviewConnectInput = nodeType.prototype.onConnectInput;
-            //     const inputList = (index !== null) ? [index] : [...Array(node.inputs.length).keys()]
-            //     if (inputList.length === 0) { return }
-        
-            //     for (let i of inputList) {
-            //         const connectedNodes = recursiveLinkUpstream(node, node.inputs[i].type, 0, i)
-                    
-            //         if (connectedNodes.length !== 0) {
-            //             for (let [node_ID, depth] of connectedNodes) {
-            //                 const connectedNode = node.graph._nodes_by_id[node_ID]
-        
-            //                 if (connectedNode.type !== "ImageLivePreview") {
-        
-            //                     const [endWidth, endHeight] = getSizeFromNode(connectedNode)
-        
-            //                     if (endWidth && endHeight) {
-            //                         if (i === 0) {
-            //                             node.sampleToID = connectedNode.id
-            //                         } else {
-            //                             node.properties["values"][i-1][3] = connectedNode.id
-            //                         }
-            //                         break
-            //                     }
-            //                 }
-            //             }
-            //         }
-            //     }
         }
     }
 });
