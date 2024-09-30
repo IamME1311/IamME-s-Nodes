@@ -402,6 +402,7 @@ class TriggerWordProcessor:
     RETURN_NAMES = ("processed_text",)
     FUNCTION = 'TextProcessor'
     CATEGORY = 'IamME'
+    OUTPUT_NODE = True
 
     def TextProcessor(self, seed, text_in):
         options = json_loader("TriggerWords")
