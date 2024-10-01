@@ -8,7 +8,17 @@ import random
 import numpy as np
 
 MAX_RESOLUTION = 16384
+ASPECT_CHOICES = ["None","custom",
+                    "1:1 (Perfect Square)",
+                    "2:3 (Classic Portrait)", "3:4 (Golden Ratio)", "3:5 (Elegant Vertical)", "4:5 (Artistic Frame)", "5:7 (Balanced Portrait)", "5:8 (Tall Portrait)",
+                    "7:9 (Modern Portrait)", "9:16 (Slim Vertical)", "9:19 (Tall Slim)", "9:21 (Ultra Tall)", "9:32 (Skyline)",
+                    "3:2 (Golden Landscape)", "4:3 (Classic Landscape)", "5:3 (Wide Horizon)", "5:4 (Balanced Frame)", "7:5 (Elegant Landscape)", "8:5 (Cinematic View)",
+                    "9:7 (Artful Horizon)", "16:9 (Panorama)", "19:9 (Cinematic Ultrawide)", "21:9 (Epic Ultrawide)", "32:9 (Extreme Ultrawide)"
+                ]
 
+def parser(aspect : str) -> int:
+    aspect = aspect.split()[0].split(":")
+    return aspect
 class AspectEmptyLatentImage:
     def __init__(self):
         self.device = comfy.model_management.intermediate_device()
@@ -19,10 +29,10 @@ class AspectEmptyLatentImage:
             "required": { 
                 "width": ("INT", {"default":1024, "min":16, "max":MAX_RESOLUTION, "step":8}),
                 "height": ("INT", {"default":1024, "min":16, "max":MAX_RESOLUTION, "step":8}),
-                "aspect_control" : ("BOOLEAN", {"default":False, "tooltip":"Set to 'True' if you want to select size based on a particular aspect ratio."}),
+                "aspect_ratio": (ASPECT_CHOICES, {"default": "None"}),
                 "model_type":(["SD1.5", "SDXL"],),
-                "aspect_width_ratio" : ("INT",{"default":9, "min":0}),
-                "aspect_height_ratio" : ("INT",{"default":16, "min":0}),
+                "aspect_width_override" : ("INT",{"default":0, "min":0}),
+                "aspect_height_override" : ("INT",{"default":0, "min":0}),
                 "width_override": ("INT", {"default": 0, "min": 0, "max": MAX_RESOLUTION, "step": 8}),
                 "batch_size": ("INT", {"default": 1, "min": 1, "max": 4096, "tooltip": "The number of latent images in the batch."})
             }
@@ -35,11 +45,13 @@ class AspectEmptyLatentImage:
     CATEGORY = "IamME"
     DESCRIPTION = "Create a new batch of empty latent images to be denoised via sampling."
 
-    def aspect_latent_gen(self, width, height, model_type, aspect_control, aspect_width_ratio, aspect_height_ratio, width_override, batch_size=1):
-        if aspect_control==True:
+    def aspect_latent_gen(self, width, height, model_type, aspect_ratio, aspect_width_override, aspect_height_override, width_override, batch_size=1):
+        if aspect_ratio!="None":
+            if aspect_ratio in ASPECT_CHOICES[2:]:
+                aspect_width_override, aspect_height_override = parser(aspect_ratio)
             if width_override > 0:
                 width = width_override - (width_override%8)
-                height = int((aspect_height_ratio * width) / aspect_width_ratio)
+                height = int((aspect_height_override * width) / aspect_width_override)
                 height = height - (height%8)
             else:
                 total_pixels = {
@@ -48,12 +60,13 @@ class AspectEmptyLatentImage:
                 }
                 pixels = total_pixels.get(model_type, 0)
 
-                aspect_ratio_value = aspect_width_ratio / aspect_height_ratio
+                aspect_ratio_value = aspect_width_override / aspect_height_override
 
                 width = int(math.sqrt(pixels * aspect_ratio_value))
                 height = int(pixels / width)
 
-        else:
+
+        else: # normal empty latent
             width = int(width - (width%8))
             height = int(height - (height%8))
     
