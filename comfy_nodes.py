@@ -370,7 +370,12 @@ class FacePromptMaker:
 
 
             if len(prompt_list) > 0:
-                if "__faceprompt__" not in opt_append_this:
+                if not opt_append_this:
+                    prompt = ", ".join(prompt_list)
+                    prompt = prompt.lower()
+
+                    return (prompt, )
+                elif "__faceprompt__" not in opt_append_this:
                     raise ValidationErr("trigger word __faceprompt__ not found!!")
                 else:
                     prompt = ", ".join(prompt_list)
