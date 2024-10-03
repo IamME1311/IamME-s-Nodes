@@ -455,6 +455,7 @@ class GeminiVision:
             "required" : {
                 "image" : ("IMAGE",),
                 "seed" : ("INT", {"forceInput":True}),
+                "randomness" : ("FLOAT", {"default":0.7, "min":0, "max": 1, "step":0.1, "display":"slider"}),
                 "prompt" : ("STRING", {"default":"Describe the image", "multiline":True})
             }
         }
@@ -463,14 +464,14 @@ class GeminiVision:
     CATEGORY = 'IamME'
     FUNCTION = 'gen_gemini'
 
-    def gen_gemini(self, image, seed, prompt):
+    def gen_gemini(self, image, seed, randomness, prompt):
         cwd = Path(__file__).parent
 
         with open(f"{cwd}\config.yaml", "r") as f:
             config = yaml.safe_load(f)
         pil_image = tensor_to_image(image)
         genai.configure(api_key=config["GEMINI_API_KEY"])
-        llm = genai.GenerativeModel(model_name="gemini-1.5-flash", generation_config=genai.GenerationConfig(temperature=0.7))
+        llm = genai.GenerativeModel(model_name="gemini-1.5-flash", generation_config=genai.GenerationConfig(temperature=randomness))
         response = llm.generate_content([prompt, pil_image])
         return (response.text,)
 
