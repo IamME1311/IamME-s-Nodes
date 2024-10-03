@@ -17,7 +17,7 @@ ASPECT_CHOICES = ["None","custom",
                 ]
 
 def parser(aspect : str) -> int:
-    aspect = aspect.split()[0].split(":")
+    aspect = list(map(aspect.split()[0].split(":")))
     return aspect
 class AspectEmptyLatentImage:
     def __init__(self):
