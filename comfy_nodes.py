@@ -6,6 +6,10 @@ import json
 import os
 import random
 import numpy as np
+import google.generativeai as genai
+from PIL import Image
+import yaml
+from pathlib import Path
 
 MAX_RESOLUTION = 16384
 ASPECT_CHOICES = ["None","custom",
@@ -15,6 +19,10 @@ ASPECT_CHOICES = ["None","custom",
                     "3:2 (Golden Landscape)", "4:3 (Classic Landscape)", "5:3 (Wide Horizon)", "5:4 (Balanced Frame)", "7:5 (Elegant Landscape)", "8:5 (Cinematic View)",
                     "9:7 (Artful Horizon)", "16:9 (Panorama)", "19:9 (Cinematic Ultrawide)", "21:9 (Epic Ultrawide)", "32:9 (Extreme Ultrawide)"
                 ]
+
+DEFAULT_SYS_PROMPT = ""
+
+
 
 def parser(aspect : str) -> int:
     aspect = list(map(int,aspect.split()[0].split(":")))
@@ -433,7 +441,38 @@ class TriggerWordProcessor:
         return {"ui": {"text": text}, "result": (text_out,)}
 
 
+def tensor_to_image(tensor) -> Image:
+    tensor = tensor.cpu()
+    image_np = tensor.squeeze().mul(255).clamp(0, 255).byte().numpy()
+    image = Image.fromarray(image_np, mode='RGB')
+    return image
 
+
+class GeminiVision:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required" : {
+                "image" : ("IMAGE",),
+                "seed" : ("INT", {"forceInput":True}),
+                "prompt" : ("STRING", {"default":"Describe the image", "multiline":True})
+            }
+        }
+
+    RETURN_TYPES = ("STRING",)
+    CATEGORY = 'IamME'
+    FUNCTION = 'gen_gemini'
+
+    def gen_gemini(self, image, seed, prompt):
+        cwd = Path(__file__).parent
+
+        with open(f"{cwd}\config.yaml", "r") as f:
+            config = yaml.safe_load(f)
+        pil_image = tensor_to_image(image)
+        genai.configure(api_key=config["GEMINI_API_KEY"])
+        llm = genai.GenerativeModel(model_name="gemini-1.5-flash", generation_config=genai.GenerationConfig(temperature=0.7))
+        response = llm.generate_content([prompt, pil_image])
+        return (response.text,)
 
 
 
@@ -445,7 +484,8 @@ NODE_CLASS_MAPPINGS = {
     "LiveTextEditor": LiveTextEditor,
     "FacePromptMaker" : FacePromptMaker,
     "TriggerWordProcessor" : TriggerWordProcessor,
-    "BasicTextEditor" : TextTransformer   
+    "BasicTextEditor" : TextTransformer,
+    "GeminiVision": GeminiVision   
 }
 
 
@@ -454,5 +494,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "LiveTextEditor" : "LiveTextEditor",
     "FacePromptMaker": "FacePromptMaker",
     "TriggerWordProcessor" : "TriggerWordProcessor",
-    "BasicTextEditor" : "BasicTextEditor"    
+    "BasicTextEditor" : "BasicTextEditor",
+    "GeminiVision":"GeminiVision"    
 }

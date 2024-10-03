@@ -1,3 +1,4 @@
 torch
 numpy
-blend_modes
+google-generativeai
+pyyaml
