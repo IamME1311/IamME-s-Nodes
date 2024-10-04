@@ -476,8 +476,22 @@ class GeminiVision:
         return (response.text,)
 
 
+class ImageBatchLoader:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required" : {
+                "folder_path" : ("STRING", {"default":""}),
+                "images_to_load" : ("INT", {"default":0, "min":0}),
+            }
+        }
+    RETURN_TYPES = ("IMAGE",)
+    RETURN_NAMES = ("images",)
+    FUNCTION = "ImageLoader"
+    CATEGORY = 'IamME'
 
-
+    def ImageLoader(self, folder_path, images_to_load):
+        return
 
 
 NODE_CLASS_MAPPINGS = {
@@ -486,7 +500,8 @@ NODE_CLASS_MAPPINGS = {
     "FacePromptMaker" : FacePromptMaker,
     "TriggerWordProcessor" : TriggerWordProcessor,
     "BasicTextEditor" : TextTransformer,
-    "GeminiVision": GeminiVision   
+    "GeminiVision": GeminiVision,
+    "ImageBatchLoader":ImageBatchLoader   
 }
 
 
@@ -496,5 +511,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "FacePromptMaker": "FacePromptMaker",
     "TriggerWordProcessor" : "TriggerWordProcessor",
     "BasicTextEditor" : "BasicTextEditor",
-    "GeminiVision":"GeminiVision"    
+    "GeminiVision":"GeminiVision",
+    "ImageBatchLoader":"ImageBatchLoader"    
 }
