@@ -490,8 +490,8 @@ class ImageBatchLoader:
                 "mode" : (["all", "incremental"], {"default":"all"})
             }
         }
-    RETURN_TYPES = ("IMAGE",)
-    RETURN_NAMES = ("images",)
+    RETURN_TYPES = ("IMAGE", "STRING",)
+    RETURN_NAMES = ("images","file name")
     FUNCTION = "ImageLoader"
     CATEGORY = 'IamME'
 
@@ -508,13 +508,17 @@ class ImageBatchLoader:
         for path in folder_path.iterdir():
             if path.suffix.lower() in [".png", ".jpg", ".jpeg"]:
                 image_paths.append(path)
-
+        
+        display_text = []
+        display_text.append(f"There are {len(image_paths)} images in this directory.")
         images = []
+        file_list = []
         if images_to_load == 0:
             images_to_load = None
 
         if mode == "all":
             for path in image_paths[:images_to_load]:
+                file_list.append(path.name)
                 i = Image.open(path)
                 i = ImageOps.exif_transpose(i)
                 i = image_to_tensor(i)
@@ -522,7 +526,9 @@ class ImageBatchLoader:
                     if images[0].shape[1:] != i.shape[1:]:
                         i = comfy.utils.common_upscale(i.movedim(-1,1), images[0].shape[2], images[0].shape[1], "bilinear", "center").movedim(1,-1) # rescale image to fit the tensor array
                 images.append(i)
+            file_name = str(file_list)
         else:
+            file_name = image_paths[self.cur_index].name
             i = Image.open(image_paths[self.cur_index])
             i = ImageOps.exif_transpose(i)
             i = image_to_tensor(i)
@@ -532,7 +538,7 @@ class ImageBatchLoader:
                 self.cur_index = 0
                 
 
-        return (torch.cat(images, dim=0),)
+        return {"ui": {"text":display_text},"result":(torch.cat(images, dim=0), file_name,)}
     
     @classmethod
     def IS_CHANGED(s, **kwargs):

@@ -104,8 +104,55 @@ app.registerExtension({
                         populate.call(this, this.widgets_values.slice(+this.widgets_values.length > 1));
                     }
                 };
+                break;
                        
-            
+            case "ImageBatchLoader":
+                function populatedata(text) {
+                    if (this.widgets) {
+                        for (let i = 3; i < this.widgets.length; i++) {
+                            this.widgets[i].onRemove?.();
+                        }
+                        this.widgets.length = 3;
+                    }
+                    
+                    const v = [...text];
+                    if (!v[0]) {
+                        v.shift();
+                    }
+                    for (const list of v) {
+                        const w = ComfyWidgets["STRING"](this, "text_new", ["STRING", { multiline: true }], app).widget;
+                        w.inputEl.readOnly = true;
+                        w.inputEl.style.opacity = 0.6;
+                        w.value = list;
+                    }
+    
+                    requestAnimationFrame(() => {
+                        const sz = this.computeSize();
+                        if (sz[0] < this.size[0]) {
+                            sz[0] = this.size[0];
+                        }
+                        if (sz[1] < this.size[1]) {
+                            sz[1] = this.size[1];
+                        }
+                        this.onResize?.(sz);
+                        app.graph.setDirtyCanvas(true, false);
+                    });
+                }
+    
+                // When the node is executed we will be sent the input text, display this in the widget
+                const onExecutedLoader = nodeType.prototype.onExecuted;
+                nodeType.prototype.onExecuted = function (message) {
+                    onExecutedLoader?.apply(this, arguments);
+                    populatedata.call(this, message.text);
+                };
+    
+                const onConfigureLoader = nodeType.prototype.onConfigure;
+                nodeType.prototype.onConfigure = function () {
+                    onConfigureLoader?.apply(this, arguments);
+                    if (this.widgets_values?.length) {
+                        populatedata.call(this, this.widgets_values.slice(+this.widgets_values.length > 1));
+                    }
+                };
         }
     }
 });
