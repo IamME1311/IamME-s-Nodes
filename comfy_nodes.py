@@ -1,4 +1,3 @@
-from xml.dom import ValidationErr
 import comfy
 import math
 import torch
@@ -7,7 +6,7 @@ import os
 import random
 import numpy as np
 import google.generativeai as genai
-from PIL import Image
+from PIL import Image, ImageOps
 import yaml
 from pathlib import Path
 
@@ -23,6 +22,26 @@ ASPECT_CHOICES = ["None","custom",
 DEFAULT_SYS_PROMPT = ""
 
 
+#Helper functions
+def json_loader(file_name:str) -> dict:
+    cwd_name = os.path.dirname(__file__)
+    path_to_asset_file = os.path.join(cwd_name, f"assets/{file_name}.json")
+    with open(path_to_asset_file, "r") as f:
+        asset_data = json.load(f)
+    return asset_data
+
+def apply_attention(text:str, weight:float) -> str:
+    weight = float(np.round(weight, 2))
+    return f"({text}:{weight})"
+
+def tensor_to_image(tensor) -> Image:
+    tensor = tensor.cpu()
+    image_np = tensor.squeeze().mul(255).clamp(0, 255).byte().numpy()
+    image = Image.fromarray(image_np, mode='RGB')
+    return image
+
+def image_to_tensor(image : Image):
+    return torch.from_numpy(np.array(image).astype(np.float32) / 255.0).unsqueeze(0)
 
 def parser(aspect : str) -> int:
     aspect = list(map(int,aspect.split()[0].split(":")))
@@ -166,19 +185,6 @@ class TextTransformer:
 
         
         return (text,)
-
-
-#Helper functions
-def json_loader(file_name:str) -> dict:
-    cwd_name = os.path.dirname(__file__)
-    path_to_asset_file = os.path.join(cwd_name, f"assets/{file_name}.json")
-    with open(path_to_asset_file, "r") as f:
-        asset_data = json.load(f)
-    return asset_data
-
-def apply_attention(text:str, weight:float) -> str:
-    weight = float(np.round(weight, 2))
-    return f"({text}:{weight})"
 
 
 random_opt = "Randomize 🎲"
@@ -397,7 +403,7 @@ class FacePromptMaker:
 
                     return (prompt, )
                 elif "__faceprompt__" not in opt_append_this:
-                    raise ValidationErr("trigger word __faceprompt__ not found!!")
+                    raise ValueError("trigger word __faceprompt__ not found!!")
                 else:
                     prompt = ", ".join(prompt_list)
                     prompt = prompt.lower()
@@ -432,7 +438,7 @@ class TriggerWordProcessor:
 
         #background
         if "__background__" not in text_in:
-            raise ValidationErr("trigger word __background__ not found!!")
+            raise ValueError("trigger word __background__ not found!!")
         else:
             bg_choice = random.choice(bg_options)
             text_out = text_in.replace("__background__", bg_choice)
@@ -440,12 +446,6 @@ class TriggerWordProcessor:
 
         return {"ui": {"text": text}, "result": (text_out,)}
 
-
-def tensor_to_image(tensor) -> Image:
-    tensor = tensor.cpu()
-    image_np = tensor.squeeze().mul(255).clamp(0, 255).byte().numpy()
-    image = Image.fromarray(image_np, mode='RGB')
-    return image
 
 
 class GeminiVision:
@@ -477,12 +477,17 @@ class GeminiVision:
 
 
 class ImageBatchLoader:
+    def __init__(self):
+        self.cur_index = 0
+        self.folder_path = ""
+
     @classmethod
     def INPUT_TYPES(s):
         return {
             "required" : {
                 "folder_path" : ("STRING", {"default":""}),
                 "images_to_load" : ("INT", {"default":0, "min":0}),
+                "mode" : (["all", "incremental"], {"default":"all"})
             }
         }
     RETURN_TYPES = ("IMAGE",)
@@ -490,8 +495,49 @@ class ImageBatchLoader:
     FUNCTION = "ImageLoader"
     CATEGORY = 'IamME'
 
-    def ImageLoader(self, folder_path, images_to_load):
-        return
+    def ImageLoader(self, folder_path, images_to_load, mode):
+        if self.folder_path != folder_path:
+            self.folder_path = folder_path
+            self.cur_index = 0
+        folder_path = Path(folder_path)
+        # check path validity
+        if not folder_path.exists() or not folder_path.is_dir():
+            raise ValueError(f"Path error : {folder_path} is either non-existent or isn't a directory!!")
+        
+        image_paths = []
+        for path in folder_path.iterdir():
+            if path.suffix.lower() in [".png", ".jpg", ".jpeg"]:
+                image_paths.append(path)
+
+        images = []
+        if images_to_load == 0:
+            images_to_load = None
+
+        if mode == "all":
+            for path in image_paths[:images_to_load]:
+                i = Image.open(path)
+                i = ImageOps.exif_transpose(i)
+                i = image_to_tensor(i)
+                if len(images)>0:
+                    if images[0].shape[1:] != i.shape[1:]:
+                        i = comfy.utils.common_upscale(i.movedim(-1,1), images[0].shape[2], images[0].shape[1], "bilinear", "center").movedim(1,-1) # rescale image to fit the tensor array
+                images.append(i)
+        else:
+            i = Image.open(image_paths[self.cur_index])
+            i = ImageOps.exif_transpose(i)
+            i = image_to_tensor(i)
+            images.append(i)
+            self.cur_index += 1
+            if self.cur_index >= len(image_paths):
+                self.cur_index = 0
+                
+
+        return (torch.cat(images, dim=0),)
+    
+    @classmethod
+    def IS_CHANGED(s, **kwargs):
+        if kwargs["mode"] == "incremental":
+            return float("NaN")
 
 
 NODE_CLASS_MAPPINGS = {
