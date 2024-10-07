@@ -435,16 +435,33 @@ class TriggerWordProcessor:
     def TextProcessor(self, seed, text_in):
         options = json_loader("TriggerWords")
         bg_options = options["background"]
+        color_options = options["color"]
+        region_options = options["regionality"]
 
         #background
         if "__background__" not in text_in:
             raise ValueError("trigger word __background__ not found!!")
         else:
             bg_choice = random.choice(bg_options)
-            text_out = text_in.replace("__background__", bg_choice)
-            text = [text_out]
+            text_in = text_in.replace("__background__", bg_choice)
 
-        return {"ui": {"text": text}, "result": (text_out,)}
+        #color
+        if "__color__" not in text_in:
+            raise ValueError("trigger word __color__ not found!!")
+        else:
+            color_choice = random.choice(color_options)
+            text_in = text_in.replace("__color__", color_choice)
+
+        #color
+        if "__region__" not in text_in:
+            raise ValueError("trigger word __region__ not found!!")
+        else:
+            region_choice = random.choice(region_options)
+            text_in = text_in.replace("__region__", region_choice)
+            
+        text = [text_in]
+
+        return {"ui": {"text": text}, "result": (text_in,)}
 
 
 
