@@ -94,15 +94,18 @@ app.registerExtension({
                 const onExecuted = nodeType.prototype.onExecuted;
                 nodeType.prototype.onExecuted = function (message) {
                     onExecuted?.apply(this, arguments);
-                    populate.call(this, message.text);
+                    if (message.text) {
+                        populate.call(this, message.text);
+                    }
                 };
     
                 const onConfigure = nodeType.prototype.onConfigure;
                 nodeType.prototype.onConfigure = function () {
                     onConfigure?.apply(this, arguments);
-                    if (this.widgets_values?.length) {
-                        populate.call(this, this.widgets_values.slice(+this.widgets_values.length > 1));
+                    if (this.widgets_values?.length >= 2) {
+                        populate.call(this, this.widgets_values.slice(2));
                     }
+                    // +this.widgets_values.length > 1
                 };
                 break;
                        
@@ -153,6 +156,7 @@ app.registerExtension({
                         populatedata.call(this, this.widgets_values.slice(+this.widgets_values.length > 1));
                     }
                 };
+                break;
         }
     }
 });

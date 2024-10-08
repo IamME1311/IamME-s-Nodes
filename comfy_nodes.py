@@ -421,8 +421,8 @@ class TriggerWordProcessor:
     def INPUT_TYPES(s):
         return {
             "required": {
-                "seed": ("INT", {"forceInput": True}),
                 "text_in": ("STRING", {"forceInput": True}),
+                "seed": ("INT", {"forceInput": True}),
             }
         }
 
