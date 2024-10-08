@@ -9,6 +9,7 @@ import google.generativeai as genai
 from PIL import Image, ImageOps
 import yaml
 from pathlib import Path
+import torchaudio
 
 MAX_RESOLUTION = 16384
 ASPECT_CHOICES = ["None","custom",
@@ -207,22 +208,22 @@ class FacePromptMaker:
                 "nationality_to_mix" : (["None"] + [random_opt] + option_dict["nationality_to_mix"], {"default": "None"}),
                 "body_type" : (["None"] + [random_opt] + option_dict["body_type"], {"default": "None"}),
                 "body_type_weight" : ("FLOAT", {"default": 1, "min":0, "max":2, "step":0.01, "display":"slider",}),
-                "Skin_Tone" : (["None"] + [random_opt] + option_dict["Skin_Tone"], {"default": "None"}), 
-                "Face_Shape" : (["None"] + [random_opt] + option_dict["Face_Shape"], {"default": "None"}),
-                "Forehead" : (["None"] + [random_opt] + option_dict["Forehead"], {"default": "None"}),
-                "Hair_Color" : (["None"] + [random_opt] + option_dict["hair_color"], {"default": "None"}),
-                "Hair_Style" : (["None"] + [random_opt] + option_dict["hair_style"], {"default": "None"}),
-                "Hair_Length" : (["None"] + [random_opt] + option_dict["Hair_Length"], {"default": "None"}),
+                "Skin_Tone" : (["None"] + [random_opt] + option_dict["Skin_Tone"], {"default": random_opt}), 
+                "Face_Shape" : (["None"] + [random_opt] + option_dict["Face_Shape"], {"default": random_opt}),
+                "Forehead" : (["None"] + [random_opt] + option_dict["Forehead"], {"default": random_opt}),
+                "Hair_Color" : (["None"] + [random_opt] + option_dict["Hair_Color"], {"default": random_opt}),
+                "Hair_Style" : (["None"] + [random_opt] + option_dict["Hair_Style"], {"default": random_opt}),
+                "Hair_Length" : (["None"] + [random_opt] + option_dict["Hair_Length"], {"default": random_opt}),
                 "General_weight" : ("FLOAT", {"default": 1.05, "min":0.05, "max":2, "step":0.01, "display":"slider",}),
-                "Eye_Color" : (["None"] + [random_opt] + option_dict["Eye_Color"], {"default": "None"}),
-                "Eye_Shape" : (["None"] + [random_opt] + option_dict["Eye_Shape"], {"default": "None"}),
-                "Eyebrows" : (["None"] +[random_opt] + option_dict["Eyebrows"], {"default": "None"}),
-                "Nose_Shape" : (["None"] + [random_opt] + option_dict["Nose_Shape"], {"default": "None"}),
-                "Lip_Color" : (["None"] + [random_opt] + option_dict["Lip_Color"], {"default": "None"}),
-                "Expression" : (["None"] + [random_opt] + option_dict["Expression"], {"default": "None"}),
+                "Eye_Color" : (["None"] + [random_opt] + option_dict["Eye_Color"], {"default": random_opt}),
+                "Eye_Shape" : (["None"] + [random_opt] + option_dict["Eye_Shape"], {"default": random_opt}),
+                "Eyebrows" : (["None"] +[random_opt] + option_dict["Eyebrows"], {"default": random_opt}),
+                "Nose_Shape" : (["None"] + [random_opt] + option_dict["Nose_Shape"], {"default": random_opt}),
+                "Lip_Color" : (["None"] + [random_opt] + option_dict["Lip_Color"], {"default": random_opt}),
+                "Expression" : (["None"] + [random_opt] + option_dict["Expression"], {"default": random_opt}),
                 "Facial_Hair" : (["None"] + [random_opt] + option_dict["Facial_Hair"], {"default": "None"}),
-                "Cheekbones" : (["None"] + [random_opt] + option_dict["Cheekbones"], {"default": "None"}),
-                "Chin_Shape" : (["None"] + [random_opt] + option_dict["Chin_Shape"], {"default": "None"}),
+                "Cheekbones" : (["None"] + [random_opt] + option_dict["Cheekbones"], {"default": random_opt}),
+                "Chin_Shape" : (["None"] + [random_opt] + option_dict["Chin_Shape"], {"default": random_opt}),
                 "beard" : (["None"] + [random_opt] + option_dict["beard"], {"default": "None"}),
                 "beard_color" : (["None"] + [random_opt] + option_dict["beard_color"], {"default": "None"}),
 
@@ -563,6 +564,29 @@ class ImageBatchLoader:
             return float("NaN")
 
 
+class LoadAudioMetadata:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required" : {
+                "audio_path" : ("STRING", {"default":""})
+            }
+        }
+    
+    CATEGORY = "IamME"
+    RETURN_TYPES = ("AUDIO", "INT",)
+    RETURN_NAMES = ("audio", "duration",)
+    FUNCTION = "AudioLoader"
+
+    def AudioLoader(slef, audio_path):
+
+        waveform, sample_rate = torchaudio.load(audio_path)
+        audio = {"waveform": waveform.unsqueeze(0), "sample_rate": sample_rate}
+        duration = waveform.shape[1] / sample_rate #duration in seconds
+        duration = int(duration)
+        return (audio, duration,)
+
+
 NODE_CLASS_MAPPINGS = {
     "AspectEmptyLatentImage" : AspectEmptyLatentImage,
     "LiveTextEditor": LiveTextEditor,
@@ -570,7 +594,8 @@ NODE_CLASS_MAPPINGS = {
     "TriggerWordProcessor" : TriggerWordProcessor,
     "BasicTextEditor" : TextTransformer,
     "GeminiVision": GeminiVision,
-    "ImageBatchLoader":ImageBatchLoader   
+    "ImageBatchLoader":ImageBatchLoader,
+    "LoadAudioMetadata" : LoadAudioMetadata   
 }
 
 
@@ -581,5 +606,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "TriggerWordProcessor" : "TriggerWordProcessor",
     "BasicTextEditor" : "BasicTextEditor",
     "GeminiVision":"GeminiVision",
-    "ImageBatchLoader":"ImageBatchLoader"    
+    "ImageBatchLoader":"ImageBatchLoader",
+    "LoadAudioMetadata":"LoadAudioMetadata"    
 }
