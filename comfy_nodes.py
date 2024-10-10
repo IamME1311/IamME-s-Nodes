@@ -284,6 +284,8 @@ class FacePromptMaker:
                 else:
                     index = option_dict["body_type"].index(body_type)
                     body_type = option_dict["body_type_prompt"][index]
+                    if Gender=="Male":
+                        body_type = body_type.replace("beautiful", "handsome").replace("petite", "lean")
                 body_type = Age + Gender + ", " + body_type
                 prompt_list_final.append(apply_attention(body_type, body_type_weight))
 
