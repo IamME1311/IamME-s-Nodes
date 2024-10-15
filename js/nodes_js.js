@@ -55,18 +55,20 @@ app.registerExtension({
                 }
                 break;
 
-
+            case "GetImageData":
             case "LiveTextEditor":
             case "TriggerWordProcessor":
                 function populate(text) {
-                    if (this.widgets) {
-                        for (let i = 2; i < this.widgets.length; i++) {
+                    const isGetImageData = this.type === "GetImageData" || this.name === "GetImageData";
+                    const targetLength = isGetImageData ? 1 : 2;
+                    if (this.widgets && this.widgets.length > targetLength) {
+                        for (let i = this.widgets.length - 1; i >=targetLength; i--) {
                             this.widgets[i].onRemove?.();
                         }
-                        this.widgets.length = 2;
+                        this.widgets.length = targetLength;
                     }
                     
-                    const v = [...text];
+                    const v = Array.isArray(text) ? text : [text];
                     if (!v[0]) {
                         v.shift();
                     }
@@ -102,7 +104,7 @@ app.registerExtension({
                 const onConfigure = nodeType.prototype.onConfigure;
                 nodeType.prototype.onConfigure = function () {
                     onConfigure?.apply(this, arguments);
-                    if (this.widgets_values?.length >= 2) {
+                    if (this.widgets_values?.length >= targetLength) {
                         populate.call(this, this.widgets_values.slice(2));
                     }
                     // +this.widgets_values.length > 1
