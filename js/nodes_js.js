@@ -59,13 +59,23 @@ app.registerExtension({
             case "LiveTextEditor":
             case "TriggerWordProcessor":
                 function populate(text) {
-                    const isGetImageData = this.type === "GetImageData" || this.name === "GetImageData";
-                    const targetLength = isGetImageData ? 1 : 2;
-                    if (this.widgets && this.widgets.length > targetLength) {
-                        for (let i = this.widgets.length - 1; i >=targetLength; i--) {
-                            this.widgets[i].onRemove?.();
+                    const isGetImageData = nodeData.name === "GetImageData";
+                    if (this.widgets) {
+                        if (isGetImageData){
+                            const pos = this.widgets.findIndex((w) => w.name === 'text2');
+                            if (pos !== -1) {
+                                for (let i = pos; i < this.widgets.length; i++) {
+                                    this.widgets[i]?.onRemove?.();
+                                }
+                                this.widgets.length = pos;
+                            }
                         }
-                        this.widgets.length = targetLength;
+                        else{
+                            for (let i = 2; i < this.widgets.length; i++) {
+                                this.widgets[i].onRemove?.();
+                            }
+                            this.widgets.length = 2;
+                        }
                     }
                     
                     const v = Array.isArray(text) ? text : [text];
@@ -104,10 +114,9 @@ app.registerExtension({
                 const onConfigure = nodeType.prototype.onConfigure;
                 nodeType.prototype.onConfigure = function () {
                     onConfigure?.apply(this, arguments);
-                    if (this.widgets_values?.length >= targetLength) {
-                        populate.call(this, this.widgets_values.slice(2));
+                    if (this.widgets_values?.length) {
+                        populate.call(this, this.widgets_values);
                     }
-                    // +this.widgets_values.length > 1
                 };
                 break;
                        
