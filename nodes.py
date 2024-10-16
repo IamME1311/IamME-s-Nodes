@@ -7,7 +7,7 @@ import yaml
 from pathlib import Path
 import math
 from .utils import (
-    MAX_RESOLUTION, ASPECT_CHOICES,
+    MAX_RESOLUTION, ASPECT_CHOICES, IMAGE_DATA,
     random_opt, option_dict, any_type,
     json_loader,
     apply_attention,
@@ -38,8 +38,8 @@ class AspectEmptyLatentImage:
                 "batch_size": ("INT", {"default": 1, "min": 1, "max": 4096, "tooltip": "The number of latent images in the batch."})
             }
         }
-    RETURN_TYPES = ("LATENT", "INT", "INT")
-    RETURN_NAMES = ("samples","width","height",)
+    RETURN_TYPES = ("LATENT", "INT", "INT", IMAGE_DATA["type"])
+    RETURN_NAMES = ("samples","width","height", IMAGE_DATA["name"])
     OUTPUT_TOOLTIPS = ("The empty latent image batch.",)
     FUNCTION = "aspect_latent_gen"
 
@@ -72,11 +72,12 @@ class AspectEmptyLatentImage:
             height = int(height - (height%8))
     
         latent = torch.zeros([batch_size, 4, height // 8, width // 8], device=self.device)
+        image_data = {"width":width, "height":height}
         return {"ui":{
                     "text": [f"{height}x{width}"]
                 }, 
                 "result":
-                    ({"samples":latent}, width, height)
+                    ({"samples":latent}, width, height, image_data)
             }
 
 
@@ -553,8 +554,8 @@ class GetImageData:
             }
         }
     
-    RETURN_TYPES = ("IMAGE", "INT", "INT", "STRING", "STRING")
-    RETURN_NAMES = ("Image", "Width", "Height", "Aspect Ratio", "Orientation")
+    RETURN_TYPES = ("IMAGE", "INT", "INT", "STRING", IMAGE_DATA["type"])
+    RETURN_NAMES = ("Image", "Width", "Height", "Aspect Ratio", IMAGE_DATA["name"])
     FUNCTION = "getData"
     CATEGORY = "IamME"
 
@@ -569,13 +570,13 @@ class GetImageData:
             orientation = "Portrait"
         else:
             orientation = "Square"
-        
+        image_data = {"width":width, "height":height, "aspect_ratio_str":aspect_ratio_str, "orientation":orientation}
         return {
             "ui" : {
                 "text" : [f"{aspect_ratio_str}"],
             },
             "result" : 
-            (Image, width, height, aspect_ratio_str, orientation),
+            (Image, width, height, aspect_ratio_str, image_data),
         }
 
 

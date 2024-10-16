@@ -17,6 +17,8 @@ ASPECT_CHOICES = ["None","custom",
 
 DEFAULT_SYS_PROMPT = ""
 
+IMAGE_DATA = {"type":"image_data", "name":"image data"}
+
 
 def json_loader(file_name:str) -> dict:
     cwd_name = os.path.dirname(__file__)
