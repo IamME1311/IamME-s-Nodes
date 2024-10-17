@@ -162,8 +162,6 @@ class TextTransformer:
         return (text,)
 
 
-
-
 class FacePromptMaker:
 
     @classmethod
@@ -404,6 +402,7 @@ class TriggerWordProcessor:
         return {
             "required": {
                 "text_in": ("STRING", {"forceInput": True}),
+                "gender" : (["male", "female"], {"default":"female"}),
                 "seed": ("INT", {"forceInput": True}),
             }
         }
@@ -414,11 +413,14 @@ class TriggerWordProcessor:
     CATEGORY = 'IamME'
     OUTPUT_NODE = True
 
-    def TextProcessor(self, seed, text_in):
+    def TextProcessor(self, seed, text_in, gender):
         options = json_loader("TriggerWords")
         bg_options = options["background"]
+        pose_options = options["pose"]
         color_options = options["color"]
-        region_options = options["regionality"]
+        topwear_options = options["topwear"]
+        bottomwear_options = options["bottomwear"]
+        # region_options = options["regionality"]
 
         #background
         if "__background__" not in text_in:
@@ -427,24 +429,43 @@ class TriggerWordProcessor:
             bg_choice = random.choice(bg_options)
             text_in = text_in.replace("__background__", bg_choice)
 
-        #color
-        if "__color__" not in text_in:
-            raise ValueError("trigger word __color__ not found!!")
-        else:
+        #topwear, bottomwear
+        if "__topwear__" not in text_in and "__bottomwear__" not in text_in :
+            raise ValueError("trigger word __topwear__ / __bottomwear__ not found!!")
+        else:            
+            if gender=="male":
+                topwear_choice = random.choice(topwear_options["male"])
+                bottomwear_choice = random.choice(bottomwear_options["male"])
+            else:
+                topwear_choice = random.choice(topwear_options["female"])
+                bottomwear_choice = random.choice(bottomwear_options["female"])
+            if "__topwear__" in text_in:
+                found_item = "__topwear__"
+            if "__bottomwear__" in text_in:
+                found_item = "__bottomwear__"
             color_choice = random.choice(color_options)
-            text_in = text_in.replace("__color__", color_choice)
-
-        #color
-        if "__region__" not in text_in:
-            raise ValueError("trigger word __region__ not found!!")
+            if found_item == "__bottomwear__":
+                clothing = f"{color_choice} {bottomwear_choice} "
+            else:
+                clothing = f"{color_choice} {topwear_choice} "
+            text_in = text_in.replace(found_item, clothing)
+        
+        #pose
+        if "__pose__" not in text_in:
+            raise ValueError("trigger word __pose__ not found!!")
         else:
-            region_choice = random.choice(region_options)
-            text_in = text_in.replace("__region__", region_choice)
+            pose_choice = random.choice(pose_options)
+            text_in = text_in.replace("__pose__", pose_choice)
+        #region
+        # if "__region__" not in text_in:
+        #     raise ValueError("trigger word __region__ not found!!")
+        # else:
+        #     region_choice = random.choice(region_options)
+        #     text_in = text_in.replace("__region__", region_choice)
             
         text = [text_in]
 
         return {"ui": {"text": text}, "result": (text_in,)}
-
 
 
 class GeminiVision:
@@ -544,6 +565,7 @@ class ImageBatchLoader:
         if kwargs["mode"] == "incremental":
             return float("NaN")
 
+
 class GetImageData:
 
     @classmethod
@@ -579,6 +601,20 @@ class GetImageData:
             (Image, width, height, aspect_ratio_str, image_data),
         }
 
+
+
+class AspectRatioCalculator:
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required" : {
+                "width" : ("FLOAT",),
+                "height" : ("FLOAT",),
+                "aspect_width" : ("INT",),
+                "aspect_height" : ("INT",),
+            }
+        }
 
 NODE_CLASS_MAPPINGS = {
     "AspectEmptyLatentImage" : AspectEmptyLatentImage,
