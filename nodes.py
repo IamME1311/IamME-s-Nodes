@@ -420,48 +420,49 @@ class TriggerWordProcessor:
         color_options = options["color"]
         topwear_options = options["topwear"]
         bottomwear_options = options["bottomwear"]
-        # region_options = options["regionality"]
+        region_options = options["regionality"]
 
-        #background
-        if "__background__" not in text_in:
-            raise ValueError("trigger word __background__ not found!!")
-        else:
-            bg_choice = random.choice(bg_options)
-            text_in = text_in.replace("__background__", bg_choice)
+        trigger_words = ["__background__", "__topwear__", "__bottomwear__", "__pose__", "__region__"]
 
-        #topwear, bottomwear
-        if "__topwear__" not in text_in and "__bottomwear__" not in text_in :
-            raise ValueError("trigger word __topwear__ / __bottomwear__ not found!!")
-        else:            
-            if gender=="male":
-                topwear_choice = random.choice(topwear_options["male"])
-                bottomwear_choice = random.choice(bottomwear_options["male"])
-            else:
-                topwear_choice = random.choice(topwear_options["female"])
-                bottomwear_choice = random.choice(bottomwear_options["female"])
-            if "__topwear__" in text_in:
-                found_item = "__topwear__"
-            if "__bottomwear__" in text_in:
-                found_item = "__bottomwear__"
-            color_choice = random.choice(color_options)
-            if found_item == "__bottomwear__":
-                clothing = f"{color_choice} {bottomwear_choice} "
-            else:
+        for word in trigger_words:
+            if word not in text_in:
+                print(f"{word} not found in input text, skipping!!")
+                continue
+            
+            #background
+            if word == "__background__":
+                bg_choice = random.choice(bg_options)
+                text_in = text_in.replace(word, bg_choice)
+
+            #topwear
+            elif word == "__topwear__":          
+                if gender=="male":
+                    topwear_choice = random.choice(topwear_options["male"])
+                else:
+                    topwear_choice = random.choice(topwear_options["female"])
+                color_choice = random.choice(color_options)
                 clothing = f"{color_choice} {topwear_choice} "
-            text_in = text_in.replace(found_item, clothing)
-        
-        #pose
-        if "__pose__" not in text_in:
-            raise ValueError("trigger word __pose__ not found!!")
-        else:
-            pose_choice = random.choice(pose_options)
-            text_in = text_in.replace("__pose__", pose_choice)
-        #region
-        # if "__region__" not in text_in:
-        #     raise ValueError("trigger word __region__ not found!!")
-        # else:
-        #     region_choice = random.choice(region_options)
-        #     text_in = text_in.replace("__region__", region_choice)
+                text_in = text_in.replace(word, clothing)
+            
+            #bottomwear
+            elif word == "__bottomwear__":          
+                if gender=="male":
+                    bottomwear_choice = random.choice(bottomwear_options["male"])
+                else:
+                    bottomwear_choice = random.choice(bottomwear_options["female"])
+                color_choice = random.choice(color_options)
+                clothing = f"{color_choice} {bottomwear_choice} "
+                text_in = text_in.replace(word, clothing)
+            
+            #pose
+            elif word == "__pose__":
+                pose_choice = random.choice(pose_options)
+                text_in = text_in.replace(word, pose_choice)
+            
+            #region
+            elif word == "__region__":
+                region_choice = random.choice(region_options)
+                text_in = text_in.replace(word, region_choice)
             
         text = [text_in]
 
@@ -476,6 +477,7 @@ class GeminiVision:
                 "image" : ("IMAGE",),
                 "seed" : ("INT", {"forceInput":True}),
                 "randomness" : ("FLOAT", {"default":0.7, "min":0, "max": 1, "step":0.1, "display":"slider"}),
+                "output_tokens" : ("INT", {"min":0, "max":500, "step":1}),
                 "prompt" : ("STRING", {"default":"Describe the image", "multiline":True})
             }
         }
@@ -484,14 +486,14 @@ class GeminiVision:
     CATEGORY = 'IamME'
     FUNCTION = 'gen_gemini'
 
-    def gen_gemini(self, image, seed, randomness, prompt):
+    def gen_gemini(self, image, seed, randomness, prompt, output_tokens=None):
         cwd = Path(__file__).parent
 
         with open(f"{cwd}\config.yaml", "r") as f:
             config = yaml.safe_load(f)
         pil_image = tensor_to_image(image)
         genai.configure(api_key=config["GEMINI_API_KEY"])
-        llm = genai.GenerativeModel(model_name="gemini-1.5-flash", generation_config=genai.GenerationConfig(temperature=randomness))
+        llm = genai.GenerativeModel(model_name="gemini-1.5-flash", generation_config=genai.GenerationConfig(temperature=randomness, max_output_tokens=output_tokens))
         response = llm.generate_content([prompt, pil_image])
         return (response.text,)
 
