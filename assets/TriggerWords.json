@@ -1133,8 +1133,8 @@
 
     "body_type" :
     {
-      "female": [],
-      "male" : []
+      "female": ["Statuesque XXXXXL physique with exaggerated hourglass shape", "Super plus-size XXXXXL build with substantial curves", "Enormous XXXXXL physique with exaggerated hourglass figure"],
+      "male" : ["Colossal XXXXXL body type with amplified proportions", "Towering XXXXXL physique with dramatic curves", "Voluptuous XXL frame with defined waist" ]
     }
 
 }
