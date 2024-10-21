@@ -6,6 +6,7 @@ from PIL import ImageOps
 import yaml
 from pathlib import Path
 import math
+import numpy as np
 from .utils import (
     MAX_RESOLUTION, ASPECT_CHOICES, IMAGE_DATA, BUS_DATA,
     random_opt, option_dict, any_type,
@@ -421,8 +422,9 @@ class TriggerWordProcessor:
         topwear_options = options["topwear"]
         bottomwear_options = options["bottomwear"]
         region_options = options["regionality"]
+        body_type_options = options["body_type"]
 
-        trigger_words = ["__background__", "__topwear__", "__bottomwear__", "__pose__", "__region__"]
+        trigger_words = ["__background__", "__topwear__", "__bottomwear__", "__pose__", "__region__", "__bodytype__"]
 
         for word in trigger_words:
             if word not in text_in:
@@ -463,6 +465,14 @@ class TriggerWordProcessor:
             elif word == "__region__":
                 region_choice = random.choice(region_options)
                 text_in = text_in.replace(word, region_choice)
+
+            elif word == "__bodytype__":
+                if gender=="male":
+                    body_type_choice = random.choice(body_type_options["male"])
+                else:
+                    body_type_choice = random.choice(body_type_options["female"])
+                body_type = f"{body_type_choice} "
+                text_in = text_in.replace(word, body_type)
             
         text = [text_in]
 
@@ -493,7 +503,7 @@ class GeminiVision:
             config = yaml.safe_load(f)
         pil_image = tensor_to_image(image)
         genai.configure(api_key=config["GEMINI_API_KEY"])
-        llm = genai.GenerativeModel(model_name="gemini-1.5-flash", generation_config=genai.GenerationConfig(temperature=randomness, max_output_tokens=output_tokens))
+        llm = genai.GenerativeModel(model_name="gemini-1.5-flash", generation_config=genai.GenerationConfig(temperature=randomness, max_output_tokens=output_tokens,))
         response = llm.generate_content([prompt, pil_image])
         return (response.text,)
 
@@ -661,6 +671,35 @@ class AspectRatioCalculator:
                 "aspect_height" : ("INT",),
             }
         }
+    
+
+class SaveImageAdvanced:
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required" : {
+                "image" : ("IMAGE",),
+                "parent_folder" : ("STRING", {"default":""}),
+                "subfolder_name" : ("STRING",{"default":""}),
+                "file_name" : ("STRING", {"default":""})
+            }
+        }
+    
+    RETURN_TYPES = ()
+    CATEGORY = "IamME"
+    FUNCTION = "save_image"
+
+    def save_image(self, image:torch.tensor, parent_folder, subfolder_name, file_name):
+        img = Image.fromarray((image.cpu().numpy() * 255).astype(np.uint8))
+
+        parent_path = Path(parent_folder)
+        subfolder_path = parent_path.joinpath(subfolder_name)
+
+        subfolder_path.mkdir(exist_ok=True)
+
+        img.save(subfolder_path.joinpath())
+        return True
 
 NODE_CLASS_MAPPINGS = {
     "AspectEmptyLatentImage" : AspectEmptyLatentImage,

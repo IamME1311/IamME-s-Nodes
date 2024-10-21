@@ -1129,7 +1129,12 @@
         "Lounge pants",
         "Pajama bottoms"
       ]
-    }
+    },
 
+    "body_type" :
+    {
+      "female": [],
+      "male" : []
+    }
 
 }
