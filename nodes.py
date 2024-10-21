@@ -418,6 +418,7 @@ class TriggerWordProcessor:
         options = json_loader("TriggerWords")
         bg_options = options["background"]
         pose_options = options["pose"]
+        whimsical_pose_options = options["whimsical_pose"]
         color_options = options["color"]
         topwear_options = options["topwear"]
         bottomwear_options = options["bottomwear"]
@@ -460,6 +461,11 @@ class TriggerWordProcessor:
             elif word == "__pose__":
                 pose_choice = random.choice(pose_options)
                 text_in = text_in.replace(word, pose_choice)
+            
+            #pose
+            elif word == "__whimsical_pose__":
+                whimsical_pose_choice = random.choice(whimsical_pose_options)
+                text_in = text_in.replace(word, whimsical_pose_choice)
             
             #region
             elif word == "__region__":
@@ -682,7 +688,8 @@ class SaveImageAdvanced:
                 "image" : ("IMAGE",),
                 "parent_folder" : ("STRING", {"default":""}),
                 "subfolder_name" : ("STRING",{"default":""}),
-                "file_name" : ("STRING", {"default":""})
+                "file_name" : ("STRING", {"default":""}),
+                "extension" : (["png", "jpg", "jpeg"])
             }
         }
     
@@ -698,7 +705,7 @@ class SaveImageAdvanced:
 
         subfolder_path.mkdir(exist_ok=True)
 
-        img.save(subfolder_path.joinpath())
+        img.save(subfolder_path.joinpath(file_name), format="")
         return True
 
 NODE_CLASS_MAPPINGS = {
