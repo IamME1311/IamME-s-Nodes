@@ -7,7 +7,7 @@ import yaml
 from pathlib import Path
 import math
 from .utils import (
-    MAX_RESOLUTION, ASPECT_CHOICES, IMAGE_DATA,
+    MAX_RESOLUTION, ASPECT_CHOICES, IMAGE_DATA, BUS_DATA,
     random_opt, option_dict, any_type,
     json_loader,
     apply_attention,
@@ -604,6 +604,50 @@ class GetImageData:
         }
 
 
+class ConnectionBus:
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required" : {},
+            "optional" : {
+                "bus" : (BUS_DATA["type"],),
+                "value_1" : (any_type,),
+                "value_2" : (any_type,),
+                "value_3" : (any_type,),
+                "value_4" : (any_type,),
+                "value_5" : (any_type,),
+                "value_6" : (any_type,),
+                "value_7" : (any_type,),
+                "value_8" : (any_type,),
+                "value_9" : (any_type,),
+                "value_10" : (any_type,),
+            }
+        }
+
+    RETURN_TYPES = (BUS_DATA["type"], any_type, any_type, any_type, any_type, any_type, any_type, any_type, any_type, any_type, any_type,)
+    RETURN_NAMES = (BUS_DATA["name"], "value_1", "value_2", "value_3", "value_4", "value_5", "value_6", "value_7", "value_8", "value_9", "value_10",)
+    CATEGORY = "IamME"
+    FUNCTION = "HandleBus"
+# value_1, value_2, value_3, value_4, value_5, value_6, value_7, value_8, value_9, value_10
+    def HandleBus(self, bus:list=None, value_1=None, value_2=None, value_3=None, value_4=None, value_5=None, value_6=None, value_7=None, value_8=None, value_9=None, value_10=None):
+        
+        #Initializing original values
+        NoneList = [None, None, None, None, None, None, None, None, None, None]
+        org_value_1, org_value_2, org_value_3, org_value_4, org_value_5, org_value_6, org_value_7, org_value_8, org_value_9, org_value_10 = NoneList
+
+        # putting
+        if bus is not None:
+            org_value_1, org_value_2, org_value_3, org_value_4, org_value_5, org_value_6, org_value_7, org_value_8, org_value_9, org_value_10 = bus
+        
+        new_bus = []
+
+        for i in range(1,11):
+            exec(f"new_bus.append((value_{i} if value_{i} is not None else org_value_{i}))")
+
+        
+
+        return (new_bus, *new_bus)
 
 class AspectRatioCalculator:
 
@@ -626,7 +670,8 @@ NODE_CLASS_MAPPINGS = {
     "BasicTextEditor" : TextTransformer,
     "GeminiVision": GeminiVision,
     "ImageBatchLoader":ImageBatchLoader,
-    "GetImageData":GetImageData
+    "GetImageData":GetImageData,
+    "ConnectionBus":ConnectionBus
 }
 
 
@@ -638,5 +683,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "BasicTextEditor" : "BasicTextEditor",
     "GeminiVision":"GeminiVision",
     "ImageBatchLoader":"ImageBatchLoader",
-    "GetImageData":"GetImageData"
+    "GetImageData":"GetImageData",
+    "ConnectionBus":"ConnectionBus"
 }

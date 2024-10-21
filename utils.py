@@ -19,6 +19,8 @@ DEFAULT_SYS_PROMPT = ""
 
 IMAGE_DATA = {"type":"image_data", "name":"image data"}
 
+BUS_DATA = {"type":"bus", "name":"bus"}
+
 
 def json_loader(file_name:str) -> dict:
     cwd_name = os.path.dirname(__file__)
@@ -50,6 +52,10 @@ option_dict = json_loader("FacePromptMaker")
 
 # thanks to pythongossss..
 class AnyType(str):
+
+    def __eq__(self, _) -> bool:
+        return True
+
     def __ne__(self, __value: object) -> bool:
         return False
 
