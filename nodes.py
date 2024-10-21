@@ -402,9 +402,9 @@ class TriggerWordProcessor:
     def INPUT_TYPES(s):
         return {
             "required": {
-                "text_in": ("STRING", {"forceInput": True}),
+                "text_in": ("STRING", {"multiline": True, "default":""}),
                 "gender" : (["male", "female"], {"default":"female"}),
-                "seed": ("INT", {"forceInput": True}),
+                "seed": ("INT", {"forceInput":True}),
             }
         }
 
@@ -412,9 +412,9 @@ class TriggerWordProcessor:
     RETURN_NAMES = ("processed_text",)
     FUNCTION = 'TextProcessor'
     CATEGORY = 'IamME'
-    OUTPUT_NODE = True
+    # OUTPUT_NODE = True
 
-    def TextProcessor(self, seed, text_in, gender):
+    def TextProcessor(self, text_in, gender, seed=0):
         options = json_loader("TriggerWords")
         bg_options = options["background"]
         pose_options = options["pose"]
@@ -480,9 +480,7 @@ class TriggerWordProcessor:
                 body_type = f"{body_type_choice} "
                 text_in = text_in.replace(word, body_type)
             
-        text = [text_in]
-
-        return {"ui": {"text": text}, "result": (text_in,)}
+        return (text_in,)
 
 
 class GeminiVision:
@@ -696,6 +694,7 @@ class SaveImageAdvanced:
     RETURN_TYPES = ()
     CATEGORY = "IamME"
     FUNCTION = "save_image"
+    OUTPUT_NODE =True
 
     def save_image(self, image:torch.tensor, parent_folder, subfolder_name, file_name, format):
         img = Image.fromarray((image.cpu().numpy() * 255).astype(np.uint8))
@@ -717,7 +716,8 @@ NODE_CLASS_MAPPINGS = {
     "GeminiVision": GeminiVision,
     "ImageBatchLoader":ImageBatchLoader,
     "GetImageData":GetImageData,
-    "ConnectionBus":ConnectionBus
+    "ConnectionBus":ConnectionBus,
+    "SaveImageAdvanced":SaveImageAdvanced
 }
 
 
@@ -730,5 +730,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "GeminiVision":"GeminiVision",
     "ImageBatchLoader":"ImageBatchLoader",
     "GetImageData":"GetImageData",
-    "ConnectionBus":"ConnectionBus"
+    "ConnectionBus":"ConnectionBus",
+    "SaveImageAdvanced":"SaveImageAdvanced"
 }

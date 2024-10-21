@@ -57,7 +57,6 @@ app.registerExtension({
 
             case "GetImageData":
             case "LiveTextEditor":
-            case "TriggerWordProcessor":
                 function populate(text) {
                     const isGetImageData = nodeData.name === "GetImageData";
                     if (this.widgets) {
