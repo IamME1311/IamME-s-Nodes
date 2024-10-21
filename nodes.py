@@ -47,7 +47,7 @@ class AspectEmptyLatentImage:
     CATEGORY = "IamME"
     DESCRIPTION = "Create a new batch of empty latent images to be denoised via sampling."
 
-    def aspect_latent_gen(self, width, height, model_type, aspect_ratio, aspect_width_override, aspect_height_override, width_override, batch_size=1):
+    def aspect_latent_gen(self, width:int, height:int, model_type:str, aspect_ratio:int, aspect_width_override:int, aspect_height_override:int, width_override:int, batch_size:int=1) -> dict:
         if aspect_ratio!="None":
             if aspect_ratio in ASPECT_CHOICES[2:]:
                 aspect_width_override, aspect_height_override = parser(aspect_ratio)
@@ -82,85 +82,65 @@ class AspectEmptyLatentImage:
             }
 
 
-class LiveTextEditor:
-    
+#___________WIP__________
+class AspectRatioCalculator:
+
     @classmethod
     def INPUT_TYPES(s):
         return {
             "required" : {
-                    "text":("STRING", {"forceInput": True}),
-                    "modify_text":("STRING", {"multiline":True, "default":""}),
-            },
-            "hidden": {
-                "unique_id": "UNIQUE_ID",
-                "extra_pnginfo": "EXTRA_PNGINFO",
-            },
+                "width" : ("FLOAT",),
+                "height" : ("FLOAT",),
+                "aspect_width" : ("INT",),
+                "aspect_height" : ("INT",),
+            }
         }
-    
-    INPUT_IS_LIST = True
-    RETURN_TYPES = ("STRING",)
-    FUNCTION = "TextEditor"
-    OUTPUT_NODE = True
-    CATEGORY = "IamME"
-
-    def TextEditor(self, text, modify_text="", unique_id=None, extra_pnginfo=None):
-        if unique_id is not None and extra_pnginfo is not None:
-            if not isinstance(extra_pnginfo, list):
-                print("Error: extra_pnginfo is not a list")
-            elif (
-                not isinstance(extra_pnginfo[0], dict)
-                or "workflow" not in extra_pnginfo[0]
-            ):
-                print("Error: extra_pnginfo[0] is not a dict or missing 'workflow' key")
-            else:
-                workflow = extra_pnginfo[0]["workflow"]
-                node = next(
-                    (x for x in workflow["nodes"] if str(x["id"]) == str(unique_id[0])),
-                    None,
-                )
-                if node:
-                    node["widgets_values"] = [text]
 
 
-        if modify_text[0]:
-            out_text = modify_text[0]
-        else:
-            out_text = text[0]
-
-        return {"ui": {"text": text}, "result": (out_text,)}
-
-
-class TextTransformer:
+class ConnectionBus:
 
     @classmethod
     def INPUT_TYPES(s):
         return {
-            "required": {
-                "text": ("STRING", {"forceInput":True}),
-                "prepend" : ("STRING", {"multiline":True, "default":""}), 
-                "append" : ("STRING", {"multiline":True, "default":""}),
-                "replace" : ("BOOLEAN", {"default" : False})
-            },
-            "optional": {
-                "to_replace" : ("STRING", {"default":""}),
-                "replace_with" : ("STRING", {"default":""}),
-            },
+            "required" : {},
+            "optional" : {
+                "bus" : (BUS_DATA["type"],),
+                "value_1" : (any_type,),
+                "value_2" : (any_type,),
+                "value_3" : (any_type,),
+                "value_4" : (any_type,),
+                "value_5" : (any_type,),
+                "value_6" : (any_type,),
+                "value_7" : (any_type,),
+                "value_8" : (any_type,),
+                "value_9" : (any_type,),
+                "value_10" : (any_type,),
+            }
         }
 
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("text",)
-    FUNCTION = 'texttransformer'
-    CATEGORY = 'IamME'
+    RETURN_TYPES = (BUS_DATA["type"], any_type, any_type, any_type, any_type, any_type, any_type, any_type, any_type, any_type, any_type,)
+    RETURN_NAMES = (BUS_DATA["name"], "value_1", "value_2", "value_3", "value_4", "value_5", "value_6", "value_7", "value_8", "value_9", "value_10",)
+    CATEGORY = "IamME"
+    FUNCTION = "HandleBus"
+# value_1, value_2, value_3, value_4, value_5, value_6, value_7, value_8, value_9, value_10
+    def HandleBus(self, bus:list=None, value_1=None, value_2=None, value_3=None, value_4=None, value_5=None, value_6=None, value_7=None, value_8=None, value_9=None, value_10=None):
+        
+        #Initializing original values
+        NoneList = [None, None, None, None, None, None, None, None, None, None]
+        org_value_1, org_value_2, org_value_3, org_value_4, org_value_5, org_value_6, org_value_7, org_value_8, org_value_9, org_value_10 = NoneList
 
-    def texttransformer(self, text, replace, prepend="", append="", to_replace="", replace_with=""):
-        text = prepend + " " + text
-        text = text + " " + append
+        # putting
+        if bus is not None:
+            org_value_1, org_value_2, org_value_3, org_value_4, org_value_5, org_value_6, org_value_7, org_value_8, org_value_9, org_value_10 = bus
+        
+        new_bus = []
 
-        if replace:
-            text = text.replace(to_replace, replace_with)
+        for i in range(1,11):
+            exec(f"new_bus.append((value_{i} if value_{i} is not None else org_value_{i}))")
 
         
-        return (text,)
+
+        return (new_bus, *new_bus)
 
 
 class FacePromptMaker:
@@ -207,33 +187,33 @@ class FacePromptMaker:
     CATEGORY = "IamME"
     FUNCTION = "PromptMaker"
 
-    def PromptMaker(self, seed, 
-                    Activate, 
-                    Gender, 
-                    Age, 
-                    nationality_to_mix, 
-                    body_type, 
-                    body_type_weight, 
-                    Skin_Tone,
-                    Face_Shape,
-                    Forehead, 
-                    Hair_Color, 
-                    Hair_Style,
-                    Hair_Length,
-                    General_weight,
-                    Eye_Color,
-                    Eye_Shape,
-                    Eyebrows,
-                    Nose_Shape,
-                    Lip_Color,
-                    Expression,
-                    Facial_Hair,
-                    Cheekbones,
-                    Chin_Shape,
-                    beard,
-                    beard_color, 
-                    opt_append_this=""
-            ):
+    def PromptMaker(self, seed:int, 
+                    Activate:bool, 
+                    Gender:str, 
+                    Age:str, 
+                    nationality_to_mix:str, 
+                    body_type:str, 
+                    body_type_weight:float, 
+                    Skin_Tone:str,
+                    Face_Shape:str,
+                    Forehead:str, 
+                    Hair_Color:str, 
+                    Hair_Style:str,
+                    Hair_Length:str,
+                    General_weight:float,
+                    Eye_Color:str,
+                    Eye_Shape:str,
+                    Eyebrows:str,
+                    Nose_Shape:str,
+                    Lip_Color:str,
+                    Expression:str,
+                    Facial_Hair:str,
+                    Cheekbones:str,
+                    Chin_Shape:str,
+                    beard:str,
+                    beard_color:str, 
+                    opt_append_this:str=""
+            ) -> tuple:
 
 
         if Activate==True:
@@ -394,7 +374,223 @@ class FacePromptMaker:
                 return(opt_append_this,)
         else: #if activate is false no need to do anything..
             return(opt_append_this,)
+
+
+class GeminiVision:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required" : {
+                "image" : ("IMAGE",),
+                "seed" : ("INT", {"forceInput":True}),
+                "randomness" : ("FLOAT", {"default":0.7, "min":0, "max": 1, "step":0.1, "display":"slider"}),
+                "output_tokens" : ("INT", {"min":0, "max":500, "step":1}),
+                "prompt" : ("STRING", {"default":"Describe the image", "multiline":True})
+            }
+        }
+
+    RETURN_TYPES = ("STRING",)
+    CATEGORY = 'IamME'
+    FUNCTION = 'gen_gemini'
+
+    def gen_gemini(self, image, seed, randomness, prompt, output_tokens=None):
+        cwd = Path(__file__).parent
+
+        with open(f"{cwd}\config.yaml", "r") as f:
+            config = yaml.safe_load(f)
+        pil_image = tensor_to_image(image)
+        genai.configure(api_key=config["GEMINI_API_KEY"])
+        llm = genai.GenerativeModel(model_name="gemini-1.5-flash", generation_config=genai.GenerationConfig(temperature=randomness, max_output_tokens=output_tokens,))
+        response = llm.generate_content([prompt, pil_image])
+        return (response.text,)
+
+
+class GetImageData:
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required" : {
+                "Image" : ("IMAGE",),
+            }
+        }
+    
+    RETURN_TYPES = ("IMAGE", "INT", "INT", "STRING", IMAGE_DATA["type"])
+    RETURN_NAMES = ("Image", "Width", "Height", "Aspect Ratio", IMAGE_DATA["name"])
+    FUNCTION = "getData"
+    CATEGORY = "IamME"
+
+    def getData(self, Image:torch.tensor):
+        width = Image.shape[2]
+        height = Image.shape[1]
+        aspect_ratio_str = f"{int(width / math.gcd(width, height))}:{int(height / math.gcd(width, height))}"
+
+        if width > height:
+            orientation = "Landscape"
+        elif height > width:
+            orientation = "Portrait"
+        else:
+            orientation = "Square"
+        image_data = {"width":width, "height":height, "aspect_ratio_str":aspect_ratio_str, "orientation":orientation}
+        return {
+            "ui" : {
+                "text" : [f"{aspect_ratio_str}"],
+            },
+            "result" : 
+            (Image, width, height, aspect_ratio_str, image_data),
+        }
+
+
+class ImageBatchLoader:
+    def __init__(self):
+        self.cur_index = 0
+        self.folder_path = ""
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required" : {
+                "folder_path" : ("STRING", {"default":""}),
+                "images_to_load" : ("INT", {"default":0, "min":0}),
+                "mode" : (["all", "incremental"], {"default":"all"})
+            }
+        }
+    RETURN_TYPES = ("IMAGE", "STRING",)
+    RETURN_NAMES = ("images","file name")
+    FUNCTION = "ImageLoader"
+    CATEGORY = 'IamME'
+
+    def ImageLoader(self, folder_path, images_to_load, mode):
+        if self.folder_path != folder_path:
+            self.folder_path = folder_path
+            self.cur_index = 0
+        folder_path = Path(folder_path)
+        # check path validity
+        if not folder_path.exists() or not folder_path.is_dir():
+            raise ValueError(f"Path error : {folder_path} is either non-existent or isn't a directory!!")
         
+        image_paths = []
+        for path in folder_path.iterdir():
+            if path.suffix.lower() in [".png", ".jpg", ".jpeg"]:
+                image_paths.append(path)
+        
+        display_text = []
+        display_text.append(f"There are {len(image_paths)} images in this directory.")
+        images = []
+        file_list = []
+        if images_to_load == 0:
+            images_to_load = None
+
+        if mode == "all":
+            for path in image_paths[:images_to_load]:
+                file_list.append(path.name)
+                i = Image.open(path)
+                i = ImageOps.exif_transpose(i)
+                i = image_to_tensor(i)
+                if len(images)>0:
+                    if images[0].shape[1:] != i.shape[1:]:
+                        i = comfy.utils.common_upscale(i.movedim(-1,1), images[0].shape[2], images[0].shape[1], "bilinear", "center").movedim(1,-1) # rescale image to fit the tensor array
+                images.append(i)
+            file_name = str(file_list)
+        else:
+            file_name = image_paths[self.cur_index].name
+            i = Image.open(image_paths[self.cur_index])
+            i = ImageOps.exif_transpose(i)
+            i = image_to_tensor(i)
+            images.append(i)
+            self.cur_index += 1
+            if self.cur_index >= len(image_paths):
+                self.cur_index = 0
+                
+
+        return {"ui": {"text":display_text},"result":(torch.cat(images, dim=0), file_name,)}
+    
+    @classmethod
+    def IS_CHANGED(s, **kwargs):
+        if kwargs["mode"] == "incremental":
+            return float("NaN")
+        
+
+class LiveTextEditor:
+    
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required" : {
+                    "text":("STRING", {"forceInput": True}),
+                    "modify_text":("STRING", {"multiline":True, "default":""}),
+            },
+            "hidden": {
+                "unique_id": "UNIQUE_ID",
+                "extra_pnginfo": "EXTRA_PNGINFO",
+            },
+        }
+    
+    INPUT_IS_LIST = True
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "TextEditor"
+    OUTPUT_NODE = True
+    CATEGORY = "IamME"
+
+    def TextEditor(self, text:str, modify_text:str="", unique_id=None, extra_pnginfo=None) -> dict:
+        if unique_id is not None and extra_pnginfo is not None:
+            if not isinstance(extra_pnginfo, list):
+                print("Error: extra_pnginfo is not a list")
+            elif (
+                not isinstance(extra_pnginfo[0], dict)
+                or "workflow" not in extra_pnginfo[0]
+            ):
+                print("Error: extra_pnginfo[0] is not a dict or missing 'workflow' key")
+            else:
+                workflow = extra_pnginfo[0]["workflow"]
+                node = next(
+                    (x for x in workflow["nodes"] if str(x["id"]) == str(unique_id[0])),
+                    None,
+                )
+                if node:
+                    node["widgets_values"] = [text]
+
+
+        if modify_text[0]:
+            out_text = modify_text[0]
+        else:
+            out_text = text[0]
+
+        return {"ui": {"text": text}, "result": (out_text,)}
+
+
+class TextTransformer:
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "text": ("STRING", {"forceInput":True}),
+                "prepend" : ("STRING", {"multiline":True, "default":""}), 
+                "append" : ("STRING", {"multiline":True, "default":""}),
+                "replace" : ("BOOLEAN", {"default" : False})
+            },
+            "optional": {
+                "to_replace" : ("STRING", {"default":""}),
+                "replace_with" : ("STRING", {"default":""}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("text",)
+    FUNCTION = 'texttransformer'
+    CATEGORY = 'IamME'
+
+    def texttransformer(self, text:str, replace:bool, prepend:str="", append:str="", to_replace:str="", replace_with:str="") -> str:
+        text = prepend + " " + text
+        text = text + " " + append
+
+        if replace:
+            text = text.replace(to_replace, replace_with)
+
+        
+        return (text,)
+      
 
 class TriggerWordProcessor:
     
@@ -481,200 +677,6 @@ class TriggerWordProcessor:
                 text_in = text_in.replace(word, body_type)
             
         return (text_in,)
-
-
-class GeminiVision:
-    @classmethod
-    def INPUT_TYPES(s):
-        return {
-            "required" : {
-                "image" : ("IMAGE",),
-                "seed" : ("INT", {"forceInput":True}),
-                "randomness" : ("FLOAT", {"default":0.7, "min":0, "max": 1, "step":0.1, "display":"slider"}),
-                "output_tokens" : ("INT", {"min":0, "max":500, "step":1}),
-                "prompt" : ("STRING", {"default":"Describe the image", "multiline":True})
-            }
-        }
-
-    RETURN_TYPES = ("STRING",)
-    CATEGORY = 'IamME'
-    FUNCTION = 'gen_gemini'
-
-    def gen_gemini(self, image, seed, randomness, prompt, output_tokens=None):
-        cwd = Path(__file__).parent
-
-        with open(f"{cwd}\config.yaml", "r") as f:
-            config = yaml.safe_load(f)
-        pil_image = tensor_to_image(image)
-        genai.configure(api_key=config["GEMINI_API_KEY"])
-        llm = genai.GenerativeModel(model_name="gemini-1.5-flash", generation_config=genai.GenerationConfig(temperature=randomness, max_output_tokens=output_tokens,))
-        response = llm.generate_content([prompt, pil_image])
-        return (response.text,)
-
-
-class ImageBatchLoader:
-    def __init__(self):
-        self.cur_index = 0
-        self.folder_path = ""
-
-    @classmethod
-    def INPUT_TYPES(s):
-        return {
-            "required" : {
-                "folder_path" : ("STRING", {"default":""}),
-                "images_to_load" : ("INT", {"default":0, "min":0}),
-                "mode" : (["all", "incremental"], {"default":"all"})
-            }
-        }
-    RETURN_TYPES = ("IMAGE", "STRING",)
-    RETURN_NAMES = ("images","file name")
-    FUNCTION = "ImageLoader"
-    CATEGORY = 'IamME'
-
-    def ImageLoader(self, folder_path, images_to_load, mode):
-        if self.folder_path != folder_path:
-            self.folder_path = folder_path
-            self.cur_index = 0
-        folder_path = Path(folder_path)
-        # check path validity
-        if not folder_path.exists() or not folder_path.is_dir():
-            raise ValueError(f"Path error : {folder_path} is either non-existent or isn't a directory!!")
-        
-        image_paths = []
-        for path in folder_path.iterdir():
-            if path.suffix.lower() in [".png", ".jpg", ".jpeg"]:
-                image_paths.append(path)
-        
-        display_text = []
-        display_text.append(f"There are {len(image_paths)} images in this directory.")
-        images = []
-        file_list = []
-        if images_to_load == 0:
-            images_to_load = None
-
-        if mode == "all":
-            for path in image_paths[:images_to_load]:
-                file_list.append(path.name)
-                i = Image.open(path)
-                i = ImageOps.exif_transpose(i)
-                i = image_to_tensor(i)
-                if len(images)>0:
-                    if images[0].shape[1:] != i.shape[1:]:
-                        i = comfy.utils.common_upscale(i.movedim(-1,1), images[0].shape[2], images[0].shape[1], "bilinear", "center").movedim(1,-1) # rescale image to fit the tensor array
-                images.append(i)
-            file_name = str(file_list)
-        else:
-            file_name = image_paths[self.cur_index].name
-            i = Image.open(image_paths[self.cur_index])
-            i = ImageOps.exif_transpose(i)
-            i = image_to_tensor(i)
-            images.append(i)
-            self.cur_index += 1
-            if self.cur_index >= len(image_paths):
-                self.cur_index = 0
-                
-
-        return {"ui": {"text":display_text},"result":(torch.cat(images, dim=0), file_name,)}
-    
-    @classmethod
-    def IS_CHANGED(s, **kwargs):
-        if kwargs["mode"] == "incremental":
-            return float("NaN")
-
-
-class GetImageData:
-
-    @classmethod
-    def INPUT_TYPES(s):
-        return {
-            "required" : {
-                "Image" : ("IMAGE",),
-            }
-        }
-    
-    RETURN_TYPES = ("IMAGE", "INT", "INT", "STRING", IMAGE_DATA["type"])
-    RETURN_NAMES = ("Image", "Width", "Height", "Aspect Ratio", IMAGE_DATA["name"])
-    FUNCTION = "getData"
-    CATEGORY = "IamME"
-
-    def getData(self, Image:torch.tensor):
-        width = Image.shape[2]
-        height = Image.shape[1]
-        aspect_ratio_str = f"{int(width / math.gcd(width, height))}:{int(height / math.gcd(width, height))}"
-
-        if width > height:
-            orientation = "Landscape"
-        elif height > width:
-            orientation = "Portrait"
-        else:
-            orientation = "Square"
-        image_data = {"width":width, "height":height, "aspect_ratio_str":aspect_ratio_str, "orientation":orientation}
-        return {
-            "ui" : {
-                "text" : [f"{aspect_ratio_str}"],
-            },
-            "result" : 
-            (Image, width, height, aspect_ratio_str, image_data),
-        }
-
-
-class ConnectionBus:
-
-    @classmethod
-    def INPUT_TYPES(s):
-        return {
-            "required" : {},
-            "optional" : {
-                "bus" : (BUS_DATA["type"],),
-                "value_1" : (any_type,),
-                "value_2" : (any_type,),
-                "value_3" : (any_type,),
-                "value_4" : (any_type,),
-                "value_5" : (any_type,),
-                "value_6" : (any_type,),
-                "value_7" : (any_type,),
-                "value_8" : (any_type,),
-                "value_9" : (any_type,),
-                "value_10" : (any_type,),
-            }
-        }
-
-    RETURN_TYPES = (BUS_DATA["type"], any_type, any_type, any_type, any_type, any_type, any_type, any_type, any_type, any_type, any_type,)
-    RETURN_NAMES = (BUS_DATA["name"], "value_1", "value_2", "value_3", "value_4", "value_5", "value_6", "value_7", "value_8", "value_9", "value_10",)
-    CATEGORY = "IamME"
-    FUNCTION = "HandleBus"
-# value_1, value_2, value_3, value_4, value_5, value_6, value_7, value_8, value_9, value_10
-    def HandleBus(self, bus:list=None, value_1=None, value_2=None, value_3=None, value_4=None, value_5=None, value_6=None, value_7=None, value_8=None, value_9=None, value_10=None):
-        
-        #Initializing original values
-        NoneList = [None, None, None, None, None, None, None, None, None, None]
-        org_value_1, org_value_2, org_value_3, org_value_4, org_value_5, org_value_6, org_value_7, org_value_8, org_value_9, org_value_10 = NoneList
-
-        # putting
-        if bus is not None:
-            org_value_1, org_value_2, org_value_3, org_value_4, org_value_5, org_value_6, org_value_7, org_value_8, org_value_9, org_value_10 = bus
-        
-        new_bus = []
-
-        for i in range(1,11):
-            exec(f"new_bus.append((value_{i} if value_{i} is not None else org_value_{i}))")
-
-        
-
-        return (new_bus, *new_bus)
-
-class AspectRatioCalculator:
-
-    @classmethod
-    def INPUT_TYPES(s):
-        return {
-            "required" : {
-                "width" : ("FLOAT",),
-                "height" : ("FLOAT",),
-                "aspect_width" : ("INT",),
-                "aspect_height" : ("INT",),
-            }
-        }
     
 
 class SaveImageAdvanced:
@@ -683,29 +685,40 @@ class SaveImageAdvanced:
     def INPUT_TYPES(s):
         return {
             "required" : {
-                "image" : ("IMAGE",),
+                "images" : ("IMAGE",),
                 "parent_folder" : ("STRING", {"default":""}),
                 "subfolder_name" : ("STRING",{"default":""}),
                 "file_name" : ("STRING", {"default":""}),
-                "format" : (["png", "jpg", "jpeg"], {"default":"jpg"})
+                "format" : (["png", "jpg", "jpeg"], {"default":"jpg"}),
+                "quality" : ("INT", {"default":75, "min":0, "max":100}),
+                "dpi" : ("INT", {"default":75, "min":0, "max":100})
             }
         }
     
-    RETURN_TYPES = ()
+    RETURN_TYPES = (any_type,)
+    RETURN_NAMES = ("opt",)
     CATEGORY = "IamME"
     FUNCTION = "save_image"
     OUTPUT_NODE =True
 
-    def save_image(self, image:torch.tensor, parent_folder, subfolder_name, file_name, format):
-        img = Image.fromarray((image.cpu().numpy() * 255).astype(np.uint8))
+    def save_image(self, images:torch.tensor, parent_folder:str, subfolder_name:str, file_name:str, format:str, quality:int, dpi:int):
+        for image in images:
+            i = 255. * image.cpu().numpy() 
+            img = Image.fromarray(np.clip(i, 0, 255).astype(np.uint8))
 
-        parent_path = Path(parent_folder)
-        subfolder_path = parent_path.joinpath(subfolder_name)
+            parent_path = Path(parent_folder)
+            subfolder_path = parent_path.joinpath(subfolder_name)
 
-        subfolder_path.mkdir(exist_ok=True)
+            subfolder_path.mkdir(exist_ok=True)
+            file_name = file_name + "." + format
 
-        img.save(subfolder_path.joinpath(file_name), format=format)
-        return True
+            if format in ["jpg", "jpeg"]:
+                img.save(subfolder_path.joinpath(file_name),  quality=quality, dpi=(dpi, dpi))
+            else:
+                img.save(subfolder_path.joinpath(file_name), dpi=(dpi, dpi))
+        return (file_name,)
+    
+
 
 NODE_CLASS_MAPPINGS = {
     "AspectEmptyLatentImage" : AspectEmptyLatentImage,
