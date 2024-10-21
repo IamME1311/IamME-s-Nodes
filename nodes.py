@@ -425,7 +425,7 @@ class TriggerWordProcessor:
         region_options = options["regionality"]
         body_type_options = options["body_type"]
 
-        trigger_words = ["__background__", "__topwear__", "__bottomwear__", "__pose__", "__region__", "__bodytype__"]
+        trigger_words = ["__background__", "__topwear__", "__bottomwear__", "__pose__", "__region__", "__bodytype__", "__whimsical_pose__"]
 
         for word in trigger_words:
             if word not in text_in:
@@ -689,7 +689,7 @@ class SaveImageAdvanced:
                 "parent_folder" : ("STRING", {"default":""}),
                 "subfolder_name" : ("STRING",{"default":""}),
                 "file_name" : ("STRING", {"default":""}),
-                "extension" : (["png", "jpg", "jpeg"])
+                "format" : (["png", "jpg", "jpeg"], {"default":"jpg"})
             }
         }
     
@@ -697,7 +697,7 @@ class SaveImageAdvanced:
     CATEGORY = "IamME"
     FUNCTION = "save_image"
 
-    def save_image(self, image:torch.tensor, parent_folder, subfolder_name, file_name):
+    def save_image(self, image:torch.tensor, parent_folder, subfolder_name, file_name, format):
         img = Image.fromarray((image.cpu().numpy() * 255).astype(np.uint8))
 
         parent_path = Path(parent_folder)
@@ -705,7 +705,7 @@ class SaveImageAdvanced:
 
         subfolder_path.mkdir(exist_ok=True)
 
-        img.save(subfolder_path.joinpath(file_name), format="")
+        img.save(subfolder_path.joinpath(file_name), format=format)
         return True
 
 NODE_CLASS_MAPPINGS = {
