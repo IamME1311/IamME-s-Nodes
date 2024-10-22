@@ -114,7 +114,9 @@ app.registerExtension({
                 nodeType.prototype.onConfigure = function () {
                     onConfigure?.apply(this, arguments);
                     if (this.widgets_values?.length) {
-                        populate.call(this, this.widgets_values);
+                        const values = this.widgets_values.slice(0, 2);
+                        populate.call(this, values);
+                        this.widgets_values = values;
                     }
                 };
                 break;
@@ -167,6 +169,10 @@ app.registerExtension({
                     }
                 };
                 break;
+        
+        
+            // case "ConnectionBus":
+
         }
     }
 });

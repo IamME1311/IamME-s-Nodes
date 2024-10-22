@@ -7,16 +7,7 @@ import yaml
 from pathlib import Path
 import math
 import numpy as np
-from .utils import (
-    MAX_RESOLUTION, ASPECT_CHOICES, IMAGE_DATA, BUS_DATA,
-    random_opt, option_dict, any_type,
-    json_loader,
-    apply_attention,
-    tensor_to_image,
-    image_to_tensor,
-    parser,
-    torch, Image
-)
+from .utils import *
 
 
 
@@ -47,7 +38,16 @@ class AspectEmptyLatentImage:
     CATEGORY = "IamME"
     DESCRIPTION = "Create a new batch of empty latent images to be denoised via sampling."
 
-    def aspect_latent_gen(self, width:int, height:int, model_type:str, aspect_ratio:int, aspect_width_override:int, aspect_height_override:int, width_override:int, batch_size:int=1) -> dict:
+    def aspect_latent_gen(self, 
+                          width:int, 
+                          height:int, 
+                          model_type:str, 
+                          aspect_ratio:int, 
+                          aspect_width_override:int, 
+                          aspect_height_override:int, 
+                          width_override:int, 
+                          batch_size:int=1
+                          ) -> dict:
         if aspect_ratio!="None":
             if aspect_ratio in ASPECT_CHOICES[2:]:
                 aspect_width_override, aspect_height_override = parser(aspect_ratio)
@@ -123,7 +123,19 @@ class ConnectionBus:
     CATEGORY = "IamME"
     FUNCTION = "HandleBus"
 # value_1, value_2, value_3, value_4, value_5, value_6, value_7, value_8, value_9, value_10
-    def HandleBus(self, bus:list=None, value_1=None, value_2=None, value_3=None, value_4=None, value_5=None, value_6=None, value_7=None, value_8=None, value_9=None, value_10=None):
+    def HandleBus(self, 
+                  bus:list=None, 
+                  value_1:AnyType=None, 
+                  value_2:AnyType=None, 
+                  value_3:AnyType=None, 
+                  value_4:AnyType=None, 
+                  value_5:AnyType=None, 
+                  value_6:AnyType=None, 
+                  value_7:AnyType=None, 
+                  value_8:AnyType=None, 
+                  value_9:AnyType=None, 
+                  value_10:AnyType=None
+                  ) -> tuple:
         
         #Initializing original values
         NoneList = [None, None, None, None, None, None, None, None, None, None]
@@ -393,7 +405,13 @@ class GeminiVision:
     CATEGORY = 'IamME'
     FUNCTION = 'gen_gemini'
 
-    def gen_gemini(self, image, seed, randomness, prompt, output_tokens=None):
+    def gen_gemini(self, 
+                   image:torch.tensor, 
+                   seed:int, 
+                   randomness:float, 
+                   prompt:str, 
+                   output_tokens:int=None
+                   ) -> tuple:
         cwd = Path(__file__).parent
 
         with open(f"{cwd}\config.yaml", "r") as f:
@@ -420,7 +438,7 @@ class GetImageData:
     FUNCTION = "getData"
     CATEGORY = "IamME"
 
-    def getData(self, Image:torch.tensor):
+    def getData(self, Image:torch.tensor) -> dict:
         width = Image.shape[2]
         height = Image.shape[1]
         aspect_ratio_str = f"{int(width / math.gcd(width, height))}:{int(height / math.gcd(width, height))}"
@@ -600,7 +618,7 @@ class TriggerWordProcessor:
             "required": {
                 "text_in": ("STRING", {"multiline": True, "default":""}),
                 "gender" : (["male", "female"], {"default":"female"}),
-                "seed": ("INT", {"forceInput":True}),
+                "seed": ("INT",{"default": 0, "min": 0, "max": 0xffffffffffffffff}),
             }
         }
 
@@ -610,7 +628,7 @@ class TriggerWordProcessor:
     CATEGORY = 'IamME'
     # OUTPUT_NODE = True
 
-    def TextProcessor(self, text_in, gender, seed=0):
+    def TextProcessor(self, text_in:str, gender:str, seed:int=None) -> tuple:
         options = json_loader("TriggerWords")
         bg_options = options["background"]
         pose_options = options["pose"]
@@ -621,6 +639,10 @@ class TriggerWordProcessor:
         region_options = options["regionality"]
         body_type_options = options["body_type"]
 
+        if seed is not None:
+            random.seed(seed)
+        random_num = np.random.default_rng(seed)
+
         trigger_words = ["__background__", "__topwear__", "__bottomwear__", "__pose__", "__region__", "__bodytype__", "__whimsical_pose__"]
 
         for word in trigger_words:
@@ -630,49 +652,49 @@ class TriggerWordProcessor:
             
             #background
             if word == "__background__":
-                bg_choice = random.choice(bg_options)
+                bg_choice = random_num.choice(bg_options)
                 text_in = text_in.replace(word, bg_choice)
 
             #topwear
             elif word == "__topwear__":          
                 if gender=="male":
-                    topwear_choice = random.choice(topwear_options["male"])
+                    topwear_choice = random_num.choice(topwear_options["male"])
                 else:
-                    topwear_choice = random.choice(topwear_options["female"])
-                color_choice = random.choice(color_options)
+                    topwear_choice = random_num.choice(topwear_options["female"])
+                color_choice = random_num.choice(color_options)
                 clothing = f"{color_choice} {topwear_choice} "
                 text_in = text_in.replace(word, clothing)
             
             #bottomwear
             elif word == "__bottomwear__":          
                 if gender=="male":
-                    bottomwear_choice = random.choice(bottomwear_options["male"])
+                    bottomwear_choice = random_num.choice(bottomwear_options["male"])
                 else:
-                    bottomwear_choice = random.choice(bottomwear_options["female"])
-                color_choice = random.choice(color_options)
+                    bottomwear_choice = random_num.choice(bottomwear_options["female"])
+                color_choice = random_num.choice(color_options)
                 clothing = f"{color_choice} {bottomwear_choice} "
                 text_in = text_in.replace(word, clothing)
             
             #pose
             elif word == "__pose__":
-                pose_choice = random.choice(pose_options)
+                pose_choice = random_num.choice(pose_options)
                 text_in = text_in.replace(word, pose_choice)
             
             #pose
             elif word == "__whimsical_pose__":
-                whimsical_pose_choice = random.choice(whimsical_pose_options)
+                whimsical_pose_choice = random_num.choice(whimsical_pose_options)
                 text_in = text_in.replace(word, whimsical_pose_choice)
             
             #region
             elif word == "__region__":
-                region_choice = random.choice(region_options)
+                region_choice = random_num.choice(region_options)
                 text_in = text_in.replace(word, region_choice)
 
             elif word == "__bodytype__":
                 if gender=="male":
-                    body_type_choice = random.choice(body_type_options["male"])
+                    body_type_choice = random_num.choice(body_type_options["male"])
                 else:
-                    body_type_choice = random.choice(body_type_options["female"])
+                    body_type_choice = random_num.choice(body_type_options["female"])
                 body_type = f"{body_type_choice} "
                 text_in = text_in.replace(word, body_type)
             
@@ -691,7 +713,7 @@ class SaveImageAdvanced:
                 "file_name" : ("STRING", {"default":""}),
                 "format" : (["png", "jpg", "jpeg"], {"default":"jpg"}),
                 "quality" : ("INT", {"default":75, "min":0, "max":100}),
-                "dpi" : ("INT", {"default":75, "min":0, "max":100})
+                "dpi" : ("INT", {"default":300, "min":1, "max":2400})
             }
         }
     
@@ -701,12 +723,23 @@ class SaveImageAdvanced:
     FUNCTION = "save_image"
     OUTPUT_NODE =True
 
-    def save_image(self, images:torch.tensor, parent_folder:str, subfolder_name:str, file_name:str, format:str, quality:int, dpi:int):
+    def save_image(self, 
+                   images:torch.tensor, 
+                   parent_folder:str, 
+                   subfolder_name:str, 
+                   file_name:str, 
+                   format:str, 
+                   quality:int, 
+                   dpi:int
+                   ) -> tuple:
         for image in images:
             i = 255. * image.cpu().numpy() 
             img = Image.fromarray(np.clip(i, 0, 255).astype(np.uint8))
 
             parent_path = Path(parent_folder)
+            if not parent_path.is_dir():
+                raise OSError("Provided parent_path is not a directory!!")
+            
             subfolder_path = parent_path.joinpath(subfolder_name)
 
             subfolder_path.mkdir(exist_ok=True)
@@ -714,7 +747,7 @@ class SaveImageAdvanced:
 
             if format in ["jpg", "jpeg"]:
                 img.save(subfolder_path.joinpath(file_name),  quality=quality, dpi=(dpi, dpi))
-            else:
+            else: #png case
                 img.save(subfolder_path.joinpath(file_name), dpi=(dpi, dpi))
         return (file_name,)
     
