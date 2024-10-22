@@ -417,8 +417,11 @@ class GeminiVision:
         with open(f"{cwd}\config.yaml", "r") as f:
             config = yaml.safe_load(f)
         pil_image = tensor_to_image(image)
+
+        sys_prompt = ""
+
         genai.configure(api_key=config["GEMINI_API_KEY"])
-        llm = genai.GenerativeModel(model_name="gemini-1.5-flash", generation_config=genai.GenerationConfig(temperature=randomness, max_output_tokens=output_tokens,))
+        llm = genai.GenerativeModel(model_name="gemini-1.5-flash", generation_config=genai.GenerationConfig(temperature=randomness), system_instruction=sys_prompt)
         response = llm.generate_content([prompt, pil_image])
         return (response.text,)
 
