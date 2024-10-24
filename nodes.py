@@ -97,7 +97,119 @@ class AspectRatioCalculator:
         }
 
 
+class ColorCorrect:
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required" : {
+                "images" : ("IMAGE",),
+                "gamma": (
+                    "FLOAT",
+                    {"default": 1.0, "min": 0.0, "max": 5.0, "step": 0.01},
+                ),
+                "contrast": (
+                    "FLOAT",
+                    {"default": 1.0, "min": 0.0, "max": 5.0, "step": 0.01},
+                ),
+                "exposure": (
+                    "FLOAT",
+                    {"default": 0.0, "min": -5.0, "max": 5.0, "step": 0.01},
+                ),
+                "offset": (
+                    "FLOAT",
+                    {"default": 0.0, "min": -5.0, "max": 5.0, "step": 0.01},
+                ),
+                "hue": (
+                    "FLOAT",
+                    {"default": 0.0, "min": -0.5, "max": 0.5, "step": 0.01},
+                ),
+                "saturation": (
+                    "FLOAT",
+                    {"default": 1.0, "min": 0.0, "max": 5.0, "step": 0.01},
+                ),
+                "value": (
+                    "FLOAT",
+                    {"default": 1.0, "min": 0.0, "max": 5.0, "step": 0.01},
+                ),
+                "cyan_red": (
+                    "FLOAT", {"default": 0, "min": -1.0, "max": 1.0, "step": 0.001}
+                ),
+                "magenta_green": (
+                    "FLOAT", {"default": 0, "min": -1.0, "max": 1.0, "step": 0.001}
+                ),
+                "yellow_blue": (
+                    "FLOAT", {"default": 0, "min": -1.0, "max": 1.0, "step": 0.001}
+                ),
+            },
+            "optional": {
+                "mask": ("MASK",)
+            },
+        }
+    
+    RETURN_TYPES = ("IMAGE",)
+    RETURN_NAMES = ("images",)
+    CATEGORY = "IamME"
+    FUNCTION = "ColorCorrect"
+
+    def ColorCorrect(self,
+                    images : torch.Tensor,
+                    gamma : float,
+                    contrast : float,
+                    exposure : float,
+                    offset : float,
+                    hue : float,
+                    saturation : float,
+                    value : float,
+                    cyan_red : float,
+                    magenta_green : float,
+                    yellow_blue : float,
+                    mask : torch.Tensor | None = None
+                ):
+        out_images = []
+
+        if mask is not None:
+            if mask.shape[0] != images.shape[0]:
+                mask = mask.expand(images.shape[0], -1, -1)
+            mask = mask.unsqueeze(-1).expand(-1, -1, -1, 3)
+
+        adjusted = gamma_correction_tensor(images, gamma)
+        adjusted = contrast_adjustment_tensor(adjusted, contrast)
+        adjusted = exposure_adjustment_tensor(adjusted, exposure)
+        adjusted = offset_adjustment_tensor(adjusted, offset)
+        adjusted = hsv_adjustment(adjusted, hue, saturation, value)    
+        adjusted = (
+            adjusted
+            if mask is None
+            else torch.where(mask > 0, adjusted, images)
+        )
+        
+        for image in adjusted:
+            # Apply color correction operations
+            image = torch.unsqueeze(image, 0)
+
+            adjusted = color_balance(image, 
+                                     [cyan_red, magenta_green, yellow_blue], 
+                                     [cyan_red, magenta_green, yellow_blue], 
+                                     [cyan_red, magenta_green, yellow_blue],
+                                     shadow_center=0.15,
+                                     midtone_center=0.5,
+                                     midtone_max=1,
+                                     preserve_luminosity=True
+                                    )
+            if image.mode == 'RGBA':
+                adjusted = RGB2RGBA(adjusted, image.split()[-1])
+        adjusted = (
+            adjusted
+            if mask is None
+            else torch.where(mask > 0, adjusted, image)
+        )
+        out_images.append(adjusted)
+
+        return (torch.cat(out_images, dim=0),)
 class ConnectionBus:
+    def __init__(self):
+        self.default_len = 10
 
     @classmethod
     def INPUT_TYPES(s):
@@ -105,16 +217,16 @@ class ConnectionBus:
             "required" : {},
             "optional" : {
                 "bus" : (BUS_DATA["type"],),
-                "value_1" : (any_type,),
-                "value_2" : (any_type,),
-                "value_3" : (any_type,),
-                "value_4" : (any_type,),
-                "value_5" : (any_type,),
-                "value_6" : (any_type,),
-                "value_7" : (any_type,),
-                "value_8" : (any_type,),
-                "value_9" : (any_type,),
-                "value_10" : (any_type,),
+                "value_1" : (any_type, {"default":None,}),
+                "value_2" : (any_type,{"default":None,}),
+                "value_3" : (any_type,{"default":None,}),
+                "value_4" : (any_type,{"default":None,}),
+                "value_5" : (any_type,{"default":None,}),
+                "value_6" : (any_type,{"default":None,}),
+                "value_7" : (any_type,{"default":None,}),
+                "value_8" : (any_type,{"default":None,}),
+                "value_9" : (any_type,{"default":None,}),
+                "value_10" : (any_type,{"default":None,}),
             }
         }
 
@@ -122,34 +234,27 @@ class ConnectionBus:
     RETURN_NAMES = (BUS_DATA["name"], "value_1", "value_2", "value_3", "value_4", "value_5", "value_6", "value_7", "value_8", "value_9", "value_10",)
     CATEGORY = "IamME"
     FUNCTION = "HandleBus"
-# value_1, value_2, value_3, value_4, value_5, value_6, value_7, value_8, value_9, value_10
+    # value_1, value_2, value_3, value_4, value_5, value_6, value_7, value_8, value_9, value_10
     def HandleBus(self, 
                   bus:list=None, 
-                  value_1:AnyType=None, 
-                  value_2:AnyType=None, 
-                  value_3:AnyType=None, 
-                  value_4:AnyType=None, 
-                  value_5:AnyType=None, 
-                  value_6:AnyType=None, 
-                  value_7:AnyType=None, 
-                  value_8:AnyType=None, 
-                  value_9:AnyType=None, 
-                  value_10:AnyType=None
+                  **kwargs
                   ) -> tuple:
         
         #Initializing original values
-        NoneList = [None, None, None, None, None, None, None, None, None, None]
-        org_value_1, org_value_2, org_value_3, org_value_4, org_value_5, org_value_6, org_value_7, org_value_8, org_value_9, org_value_10 = NoneList
+        org_values = [None for i in range(self.default_len)]
 
-        # putting
+        # initializing original values with bus values
         if bus is not None:
-            org_value_1, org_value_2, org_value_3, org_value_4, org_value_5, org_value_6, org_value_7, org_value_8, org_value_9, org_value_10 = bus
+            org_values = bus
         
+        print(f"org_values = {org_values}")
         new_bus = []
 
-        for i in range(1,11):
-            exec(f"new_bus.append((value_{i} if value_{i} is not None else org_value_{i}))")
-
+        print(f"IamME's ConnectionBus : No. of arguments passed is, {len(kwargs)}")
+        for index, (key, value) in enumerate(kwargs.items()):
+            new_bus.append(value if value is not None else org_values[index])
+        if len(kwargs)==0:
+            new_bus = bus
         
 
         return (new_bus, *new_bus)
@@ -406,7 +511,7 @@ class GeminiVision:
     FUNCTION = 'gen_gemini'
 
     def gen_gemini(self, 
-                   image:torch.tensor, 
+                   image:torch.Tensor, 
                    seed:int, 
                    randomness:float, 
                    prompt:str, 
@@ -441,7 +546,7 @@ class GetImageData:
     FUNCTION = "getData"
     CATEGORY = "IamME"
 
-    def getData(self, Image:torch.tensor) -> dict:
+    def getData(self, Image:torch.Tensor) -> dict:
         width = Image.shape[2]
         height = Image.shape[1]
         aspect_ratio_str = f"{int(width / math.gcd(width, height))}:{int(height / math.gcd(width, height))}"
@@ -481,7 +586,7 @@ class ImageBatchLoader:
     FUNCTION = "ImageLoader"
     CATEGORY = 'IamME'
 
-    def ImageLoader(self, folder_path, images_to_load, mode):
+    def ImageLoader(self, folder_path, images_to_load, mode) -> torch.Tensor:
         if self.folder_path != folder_path:
             self.folder_path = folder_path
             self.cur_index = 0
@@ -727,7 +832,7 @@ class SaveImageAdvanced:
     OUTPUT_NODE =True
 
     def save_image(self, 
-                   images:torch.tensor, 
+                   images:torch.Tensor, 
                    parent_folder:str, 
                    subfolder_name:str, 
                    file_name:str, 
@@ -766,7 +871,8 @@ NODE_CLASS_MAPPINGS = {
     "ImageBatchLoader":ImageBatchLoader,
     "GetImageData":GetImageData,
     "ConnectionBus":ConnectionBus,
-    "SaveImageAdvanced":SaveImageAdvanced
+    "SaveImageAdvanced":SaveImageAdvanced,
+    "ColorCorrect" : ColorCorrect
 }
 
 
@@ -780,5 +886,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ImageBatchLoader":"ImageBatchLoader",
     "GetImageData":"GetImageData",
     "ConnectionBus":"ConnectionBus",
-    "SaveImageAdvanced":"SaveImageAdvanced"
+    "SaveImageAdvanced":"SaveImageAdvanced",
+    "ColorCorrect":"Color Correct"
 }

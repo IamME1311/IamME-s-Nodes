@@ -169,9 +169,82 @@ app.registerExtension({
                     }
                 };
                 break;
+                
+            case "ColorCorrect":
+                nodeType.prototype.onNodeCreated = function () {
+                this._type = "IMAGE"
+                this.inputs_offset = nodeData.name.includes("selective")?1:0
+                this.addWidget("button", "Reset Values", null, () => {
+                    const defaults = {
+                        "gamma": 1.0,
+                        "contrast": 1.0,
+                        "exposure": 0.0,
+                        "offset": 0.0,
+                        "hue": 0.0,
+                        "saturation": 1.0,
+                        "value": 1.0,
+                        "cyan_red": 0,
+                        "magenta_green": 0,
+                        "yellow_blue": 0
+                    };
+                
+                    for (const widget of this.widgets) {
+                        if (widget.type !== "button" && defaults.hasOwnProperty(widget.name)) {
+                            widget.value = defaults[widget.name];
+                        }
+                    }
+                    // Force a node update if needed
+                    this.onNodeChanged?.();  // or this.onPropertyChanged?.();
+                });
+                }
+                break;
         
-        
-            // case "ConnectionBus":
+            case "ConnectionBus":
+                const onConnectionsChange = nodeType.prototype.onConnectionsChange;
+
+                nodeType.prototype.onConnectionsChange = function (type, index, connected, link_info) {
+                    if (!link_info)
+                        return;
+                    if (type==2){ //handling output slot connection
+                        if (connected){
+                            if (index != 0){
+                                this.outputs[index].type = link_info.type;
+                                this.outputs[index].label = link_info.type;
+                                this.outputs[index].name = link_info.type;
+                                this.inputs[index].type = link_info.type;
+                                this.inputs[index].label = link_info.type;
+                                this.inputs[index].name = link_info.type;
+                            }
+                        }
+                        return;
+                    } 
+                    else{ //handling input slot connection
+
+                        if (connected && link_info.origin_id && index != 0){
+                            const node =app.graph.getNodeById(link_info.origin_id);
+                            const origin_type = node.outputs[link_info.origin_slot]?.type;
+                            
+                            if (origin_type && origin_type !== "*"){
+                                this.outputs[index].type = origin_type;
+                                this.outputs[index].label = origin_type;
+                                this.outputs[index].name = origin_type;
+                                this.inputs[index].type = origin_type;
+                                this.inputs[index].label = origin_type;
+                                this.inputs[index].name = origin_type;
+
+                                app.graph.setDirtyCanvas(true);
+                            }
+                            else{
+                                this.disconnectInput(index);
+                            }
+                            
+                        }
+                        return;
+                    }
+                    
+                }
+                break;
+     
 
         }
     }
