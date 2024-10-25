@@ -9,6 +9,9 @@ import __main__
 WEB_DIRECTORY = './js'
 __all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS', 'WEB_DIRECTORY']
 
+BOLD = '\033[1m'
+CYAN = '\033[36m'
+RESET = '\033[0m'
 
 extentions_folder = os.path.join(os.path.dirname(os.path.realpath(__main__.__file__)),
                                  "web" + os.sep + "extensions" + os.sep + "IamMEsNodes")
@@ -16,7 +19,7 @@ javascript_folder = os.path.join(os.path.dirname(os.path.realpath(__file__)), "j
 outdate_file_list = ['nodes_js.js']
 
 if not os.path.exists(extentions_folder):
-    print('# IamMEsNodes: Making the "web\extensions\IamMEsNodes" folder')
+    print(f"{BOLD}{CYAN}#[IamMEsNodes]: Making the 'web\extensions\IamMEsNodes' folder{RESET}")
     os.mkdir(extentions_folder)
 else:
     for i in outdate_file_list:
@@ -25,14 +28,13 @@ else:
             os.remove(outdate_file)
 
 result = filecmp.dircmp(javascript_folder, extentions_folder)
-
 if result.left_only or result.diff_files:
-    print('# IamMEsNodes: Update to javascripts files detected')
+    print(f"{BOLD}{CYAN}#[IamMEsNodes]: Update to javascripts files detected{RESET}")
     file_list = list(result.left_only)
     file_list.extend(x for x in result.diff_files if x not in file_list)
 
     for file in file_list:
-        print(f'# IamMEsNodes:: Copying {file} to extensions folder')
+        print(f"{BOLD}{CYAN}#[IamMEsNodes]: Copying {file} to extensions folder{RESET}")
         src_file = os.path.join(javascript_folder, file)
         dst_file = os.path.join(extentions_folder, file)
         if os.path.exists(dst_file):

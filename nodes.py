@@ -1,3 +1,4 @@
+from re import T
 import comfy
 import math
 import random
@@ -6,8 +7,8 @@ from PIL import ImageOps
 import yaml
 from pathlib import Path
 import math
-import numpy as np
 from .utils import *
+from .image_utils import *
 
 
 
@@ -106,31 +107,31 @@ class ColorCorrect:
                 "images" : ("IMAGE",),
                 "gamma": (
                     "FLOAT",
-                    {"default": 1.0, "min": 0.0, "max": 5.0, "step": 0.01},
+                    {"default": 1, "min": 0.1, "max": 10, "step": 0.01},
                 ),
                 "contrast": (
                     "FLOAT",
-                    {"default": 1.0, "min": 0.0, "max": 5.0, "step": 0.01},
+                    {"default": 1, "min": 0.0, "max": 3, "step": 0.01},
                 ),
                 "exposure": (
-                    "FLOAT",
-                    {"default": 0.0, "min": -5.0, "max": 5.0, "step": 0.01},
+                    "INT",
+                    {"default": 0, "min": -100, "max": 100, "step": 1},
                 ),
-                "offset": (
-                    "FLOAT",
-                    {"default": 0.0, "min": -5.0, "max": 5.0, "step": 0.01},
+                "temperature": (
+                    "FLOAT", 
+                    {"default": 0, "min": -100, "max": 100, "step": 1},
                 ),
                 "hue": (
-                    "FLOAT",
-                    {"default": 0.0, "min": -0.5, "max": 0.5, "step": 0.01},
+                    "INT",
+                    {"default": 0, "min": -255, "max": 255, "step": 1},
                 ),
                 "saturation": (
-                    "FLOAT",
-                    {"default": 1.0, "min": 0.0, "max": 5.0, "step": 0.01},
+                    "INT",
+                    {"default": 0, "min": -255, "max": 255, "step": 1},
                 ),
                 "value": (
-                    "FLOAT",
-                    {"default": 1.0, "min": 0.0, "max": 5.0, "step": 0.01},
+                    "INT",
+                    {"default": 0, "min": -255, "max": 255, "step": 1},
                 ),
                 "cyan_red": (
                     "FLOAT", {"default": 0, "min": -1.0, "max": 1.0, "step": 0.001}
@@ -156,57 +157,136 @@ class ColorCorrect:
                     images : torch.Tensor,
                     gamma : float,
                     contrast : float,
-                    exposure : float,
-                    offset : float,
-                    hue : float,
-                    saturation : float,
-                    value : float,
+                    exposure : int,
+                    hue : int,
+                    saturation : int,
+                    value : int,
                     cyan_red : float,
                     magenta_green : float,
                     yellow_blue : float,
+                    temperature : float,
                     mask : torch.Tensor | None = None
                 ):
-        out_images = []
+        
+
+        l_images = []
+        l_masks = []
+        return_images = []
+
+        for l in images:
+            l_images.append(torch.unsqueeze(l, 0))
+            m = tensor2pil(l)
+            if m.mode == 'RGBA':
+                l_masks.append(m.split()[-1])
+            else:
+                l_masks.append(Image.new('L', m.size, 'white'))
 
         if mask is not None:
-            if mask.shape[0] != images.shape[0]:
-                mask = mask.expand(images.shape[0], -1, -1)
-            mask = mask.unsqueeze(-1).expand(-1, -1, -1, 3)
+            if mask.dim() == 2:
+                mask = torch.unsqueeze(mask, 0)
+            l_masks = []
+            for m in mask:
+                l_masks.append(tensor2pil(torch.unsqueeze(m, 0)).convert('L'))
 
-        adjusted = gamma_correction_tensor(images, gamma)
-        adjusted = contrast_adjustment_tensor(adjusted, contrast)
-        adjusted = exposure_adjustment_tensor(adjusted, exposure)
-        adjusted = offset_adjustment_tensor(adjusted, offset)
-        adjusted = hsv_adjustment(adjusted, hue, saturation, value)    
-        adjusted = (
-            adjusted
-            if mask is None
-            else torch.where(mask > 0, adjusted, images)
-        )
-        
-        for image in adjusted:
-            # Apply color correction operations
-            image = torch.unsqueeze(image, 0)
+        if len(l_images) != len(l_masks):
+            raise ValueError("Number of images and masks is not the same, aborting!!")
 
-            adjusted = color_balance(image, 
-                                     [cyan_red, magenta_green, yellow_blue], 
-                                     [cyan_red, magenta_green, yellow_blue], 
-                                     [cyan_red, magenta_green, yellow_blue],
-                                     shadow_center=0.15,
-                                     midtone_center=0.5,
-                                     midtone_max=1,
-                                     preserve_luminosity=True
-                                    )
-            if image.mode == 'RGBA':
-                adjusted = RGB2RGBA(adjusted, image.split()[-1])
-        adjusted = (
-            adjusted
-            if mask is None
-            else torch.where(mask > 0, adjusted, image)
-        )
-        out_images.append(adjusted)
+        for  i in range(len(l_images)):
+            mask = l_masks[i]
+            image = l_images[i]
+            # preserving original image for later comparisions
+            original_image = tensor2pil(image)
 
-        return (torch.cat(out_images, dim=0),)
+             # apply temperature [takes in tensor][gives out PIL]
+            # if temperature:
+            #     print("in temperature")
+            #     temperature /= -100
+            #     # result = torch.zeros_like(i)
+                
+            #     tensor_image = image.numpy()
+            #     modified_image = Image.fromarray((tensor_image * 255).astype(np.uint8))
+            #     modified_image = np.array(modified_image).astype(np.float32)
+            #     if temperature > 0:
+            #         modified_image[:, :, 0] *= 1 + temperature
+            #         modified_image[:, :, 1] *= 1 + temperature * 0.4
+            #     elif temperature < 0:
+            #         modified_image[:, :, 0] *= 1 + temperature * 0.2
+            #         modified_image[:, :, 2] *= 1 - temperature
+
+            #     modified_image = np.clip(modified_image, 0, 255)
+            #     modified_image = modified_image.astype(np.uint8)
+            #     modified_image = modified_image / 255
+            #     modified_image = torch.from_numpy(modified_image).unsqueeze(0)
+            #     i = modified_image
+            
+            # apply HSV, [takes in tensor][gives out PIL]
+            _h, _s, _v = tensor2pil(image).convert('HSV').split()
+            if hue != 0 :
+                print("in hue")
+                _h = image_hue_offset(_h, hue)
+            if saturation != 0 :
+                print("in saturation")
+                _s = image_gray_offset(_s, saturation)
+            if value != 0 :
+                print("in value")
+                _v = image_gray_offset(_v, value)
+            return_image = image_channel_merge((_h, _s, _v), 'HSV')
+
+            # apply color balance [takes in PIL][gives out PIL]
+            return_image = color_balance(return_image,
+                    [cyan_red, magenta_green, yellow_blue],
+                    [cyan_red, magenta_green, yellow_blue],
+                    [cyan_red, magenta_green, yellow_blue],
+                            shadow_center=0.15,
+                            midtone_center=0.5,
+                            midtone_max=1,
+                            preserve_luminosity=True)
+
+            # apply gamma [takes in tensor][gives out PIL image]
+            if (type(return_image) == Image.Image):
+                print("gamma trigger")
+                return_image = pil2tensor(return_image)
+            return_image = gamma_trans(tensor2pil(image), gamma)
+
+            #apply contrast [takes and gives out PIL]
+            if (contrast != 1):
+                print("in contrast")
+                contrast_image = ImageEnhance.Contrast(return_image)
+                return_image = contrast_image.enhance(factor=contrast)
+
+            # apply exposure [takes in tensor][gives out PIL]
+            if exposure:
+                print("in exposure")
+                return_image = pil2tensor(return_image)
+                temp = return_image.detach().clone().cpu().numpy().astype(np.float32)
+                more = temp[:, :, :, :3] > 0
+                temp[:, :, :, :3][more] *= pow(2, exposure / 32)
+                if exposure < 0:
+                    bp = -exposure / 250
+                    scale = 1 / (1 - bp)
+                    temp = np.clip((temp - bp) * scale, 0.0, 1.0)
+                return_image = tensor2pil(torch.from_numpy(temp))
+            
+
+
+
+            # # apply Hue, Saturation, Value (HSV) [takes and gives out PIL]
+            # if saturation != 1:
+            #     color_image = ImageEnhance.Color(return_image)
+            #     return_image = color_image.enhance(factor=saturation)
+            
+            return_image = chop_image_v2(original_image, return_image, blend_mode="normal", opacity=100)
+            return_image.paste(original_image, mask=ImageChops.invert(mask))
+            if original_image.mode == 'RGBA':
+                return_image = RGB2RGBA(return_image, original_image.split()[-1])
+
+            return_images.append(pil2tensor(return_image))
+
+
+
+        return (torch.cat(return_images, dim=0),)
+
+
 class ConnectionBus:
     def __init__(self):
         self.default_len = 10
@@ -249,15 +329,17 @@ class ConnectionBus:
         
         print(f"org_values = {org_values}")
         new_bus = []
+        message_to_js = []
 
         print(f"IamME's ConnectionBus : No. of arguments passed is, {len(kwargs)}")
         for index, (key, value) in enumerate(kwargs.items()):
+            message_to_js.append(key)
             new_bus.append(value if value is not None else org_values[index])
         if len(kwargs)==0:
             new_bus = bus
         
 
-        return (new_bus, *new_bus)
+        return {"ui" : {"message":message_to_js}, "result":(new_bus, *new_bus)}
 
 
 class FacePromptMaker:
@@ -521,12 +603,12 @@ class GeminiVision:
 
         with open(f"{cwd}\config.yaml", "r") as f:
             config = yaml.safe_load(f)
-        pil_image = tensor_to_image(image)
+        pil_image = tensor2pil(image)
 
-        sys_prompt = ""
+        # sys_prompt = ""
 
         genai.configure(api_key=config["GEMINI_API_KEY"])
-        llm = genai.GenerativeModel(model_name="gemini-1.5-flash", generation_config=genai.GenerationConfig(temperature=randomness), system_instruction=sys_prompt)
+        llm = genai.GenerativeModel(model_name="gemini-1.5-flash", generation_config=genai.GenerationConfig(temperature=randomness))
         response = llm.generate_content([prompt, pil_image])
         return (response.text,)
 
@@ -612,7 +694,7 @@ class ImageBatchLoader:
                 file_list.append(path.name)
                 i = Image.open(path)
                 i = ImageOps.exif_transpose(i)
-                i = image_to_tensor(i)
+                i = pil2tensor(i)
                 if len(images)>0:
                     if images[0].shape[1:] != i.shape[1:]:
                         i = comfy.utils.common_upscale(i.movedim(-1,1), images[0].shape[2], images[0].shape[1], "bilinear", "center").movedim(1,-1) # rescale image to fit the tensor array
@@ -622,7 +704,7 @@ class ImageBatchLoader:
             file_name = image_paths[self.cur_index].name
             i = Image.open(image_paths[self.cur_index])
             i = ImageOps.exif_transpose(i)
-            i = image_to_tensor(i)
+            i = pil2tensor(i)
             images.append(i)
             self.cur_index += 1
             if self.cur_index >= len(image_paths):

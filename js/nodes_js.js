@@ -176,13 +176,13 @@ app.registerExtension({
                 this.inputs_offset = nodeData.name.includes("selective")?1:0
                 this.addWidget("button", "Reset Values", null, () => {
                     const defaults = {
-                        "gamma": 1.0,
-                        "contrast": 1.0,
-                        "exposure": 0.0,
-                        "offset": 0.0,
-                        "hue": 0.0,
-                        "saturation": 1.0,
-                        "value": 1.0,
+                        "gamma": 1,
+                        "contrast": 1,
+                        "exposure": 0,
+                        "temperature":0.0,
+                        "hue": 0,
+                        "saturation": 0,
+                        "value": 0,
                         "cyan_red": 0,
                         "magenta_green": 0,
                         "yellow_blue": 0
