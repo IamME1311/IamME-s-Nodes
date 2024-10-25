@@ -155,16 +155,16 @@ class ColorCorrect:
 
     def ColorCorrect(self,
                     images : torch.Tensor,
-                    gamma : float,
-                    contrast : float,
-                    exposure : int,
-                    hue : int,
-                    saturation : int,
-                    value : int,
-                    cyan_red : float,
-                    magenta_green : float,
-                    yellow_blue : float,
-                    temperature : float,
+                    gamma : float=1,
+                    contrast : float=1,
+                    exposure : int=0,
+                    hue : int=0,
+                    saturation : int=0,
+                    value : int=0,
+                    cyan_red : float=0,
+                    magenta_green : float=0,
+                    yellow_blue : float=0,
+                    temperature : float=0,
                     mask : torch.Tensor | None = None
                 ):
         
@@ -191,9 +191,9 @@ class ColorCorrect:
         if len(l_images) != len(l_masks):
             raise ValueError("Number of images and masks is not the same, aborting!!")
 
-        for  i in range(len(l_images)):
-            mask = l_masks[i]
-            image = l_images[i]
+        for  index, image in enumerate(images):
+            mask = l_masks[index]
+            # image = l_images[i]
             # preserving original image for later comparisions
             original_image = tensor2pil(image)
 
@@ -232,7 +232,7 @@ class ColorCorrect:
                 _v = image_gray_offset(_v, value)
             return_image = image_channel_merge((_h, _s, _v), 'HSV')
 
-            # apply color balance [takes in PIL][gives out PIL]
+           # apply color balance [takes in PIL][gives out PIL]
             return_image = color_balance(return_image,
                     [cyan_red, magenta_green, yellow_blue],
                     [cyan_red, magenta_green, yellow_blue],
@@ -242,11 +242,11 @@ class ColorCorrect:
                             midtone_max=1,
                             preserve_luminosity=True)
 
-            # apply gamma [takes in tensor][gives out PIL image]
+            #apply gamma [takes in tensor][gives out PIL image]
             if (type(return_image) == Image.Image):
                 print("gamma trigger")
                 return_image = pil2tensor(return_image)
-            return_image = gamma_trans(tensor2pil(image), gamma)
+            return_image = gamma_trans(tensor2pil(return_image), gamma)
 
             #apply contrast [takes and gives out PIL]
             if (contrast != 1):
@@ -268,13 +268,6 @@ class ColorCorrect:
                 return_image = tensor2pil(torch.from_numpy(temp))
             
 
-
-
-            # # apply Hue, Saturation, Value (HSV) [takes and gives out PIL]
-            # if saturation != 1:
-            #     color_image = ImageEnhance.Color(return_image)
-            #     return_image = color_image.enhance(factor=saturation)
-            
             return_image = chop_image_v2(original_image, return_image, blend_mode="normal", opacity=100)
             return_image.paste(original_image, mask=ImageChops.invert(mask))
             if original_image.mode == 'RGBA':
