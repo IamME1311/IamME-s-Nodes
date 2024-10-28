@@ -205,15 +205,25 @@ app.registerExtension({
                 nodeType.prototype.onConnectionsChange = function (type, index, connected, link_info) {
                     if (!link_info)
                         return;
+
+                    if (index === 0){
+                        if (connected){
+                            this.propogateExistingTypes(link_info.node_id);
+                        }
+                        return ;
+                    }
+
+
+
                     if (type==2){ //handling output slot connection
                         if (connected){
                             if (index != 0){
                                 this.outputs[index].type = link_info.type;
                                 this.outputs[index].label = link_info.type;
                                 this.outputs[index].name = link_info.type;
-                                this.inputs[index].type = link_info.type;
+                                // this.inputs[index].type = link_info.type;
                                 this.inputs[index].label = link_info.type;
-                                this.inputs[index].name = link_info.type;
+                                // this.inputs[index].name = link_info.type; 
                             }
                         }
                         return;
@@ -221,17 +231,18 @@ app.registerExtension({
                     else{ //handling input slot connection
 
                         if (connected && link_info.origin_id && index != 0){
-                            const node =app.graph.getNodeById(link_info.origin_id);
+                            const node = app.graph.getNodeById(link_info.origin_id);
                             const origin_type = node.outputs[link_info.origin_slot]?.type;
                             
                             if (origin_type && origin_type !== "*"){
                                 this.outputs[index].type = origin_type;
                                 this.outputs[index].label = origin_type;
                                 this.outputs[index].name = origin_type;
-                                this.inputs[index].type = origin_type;
+                                // this.inputs[index].type = origin_type;
                                 this.inputs[index].label = origin_type;
-                                this.inputs[index].name = origin_type;
+                                // this.inputs[index].name = origin_type; 
 
+                                this.propogateTypeChange(index, origin_type);
                                 app.graph.setDirtyCanvas(true);
                             }
                             else{
@@ -242,7 +253,66 @@ app.registerExtension({
                         return;
                     }
                     
-                }
+                };
+
+                nodeType.prototype.propogateExistingTypes = function(targetNodeId){
+                    const targertNode = app.graph.getNodeById(targetNodeId);
+                    if (!targertNode || targertNode.type !== "ConnectionBus") return;
+
+                    for (let i=1; i<=10; i++){
+                        if (this.outputs[i] && this.outputs[i].type && this.outputs[i].type !== "*"){
+                            targertNode.outputs[i].type = this.outputs[i].type;
+                            targertNode.outputs[i].label = this.outputs[i].label;
+                            targertNode.outputs[i].name = this.outputs[i].name;
+                            targertNode.inputs[i].label = this.outputs[i].label;
+
+                            targertNode.propogateTypeChange(i, this.outputs[i].type);
+                        }
+                    }
+                    app.graph.setDirtyCanvas(true);
+                };
+
+
+
+                nodeType.prototype.propogateTypeChange = function(index, new_type){
+                    const connectedNodes = this.getConnectedBusNodes();
+
+                    for (const node of connectedNodes){
+                        if (node.type === "ConnectionBus"){
+
+                            if (node.inputs[index]){
+                                node.inputs[index].label = new_type;
+                            }
+
+                            if (node.outputs[index]){
+                                node.outputs[index].type = new_type;
+                                node.outputs[index].label = new_type;
+                                node.outputs[index].name = new_type;
+                            }
+
+                            node.propogateTypeChange(index, new_type);
+                        }
+                    }
+                };
+
+                nodeType.prototype.getConnectedBusNodes = function(){
+                    const connectedNodes = [];
+
+                    const links = this.outputs[0].links;
+
+                    if (links){
+                        for (const linkId of links){
+                            const link = app.graph.links[linkId];
+                            if (link){
+                                const targetNode = app.graph.getNodeById(link.target_id);
+                                if (targetNode && targetNode.type === "ConnectionBus"){
+                                    connectedNodes.push(targetNode);
+                                }
+                            }
+                        }
+                    }
+                    return connectedNodes;
+                };
                 break;
      
 
