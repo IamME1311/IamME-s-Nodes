@@ -192,32 +192,32 @@ class ColorCorrect:
             raise ValueError("Number of images and masks is not the same, aborting!!")
 
         for  index, image in enumerate(images):
+            print(f"index:{index}, no of images:{len(images)}")
             mask = l_masks[index]
-            # image = l_images[i]
+            # image = l_images[index]
             # preserving original image for later comparisions
             original_image = tensor2pil(image)
 
-             # apply temperature [takes in tensor][gives out PIL]
-            # if temperature:
-            #     print("in temperature")
-            #     temperature /= -100
-            #     # result = torch.zeros_like(i)
+            # apply temperature [takes in tensor][gives out tensor]
+            if temperature != 0:
+                print("in temperature") # for debugging
+                temperature /= -100
+                # result = torch.zeros_like(i)
                 
-            #     tensor_image = image.numpy()
-            #     modified_image = Image.fromarray((tensor_image * 255).astype(np.uint8))
-            #     modified_image = np.array(modified_image).astype(np.float32)
-            #     if temperature > 0:
-            #         modified_image[:, :, 0] *= 1 + temperature
-            #         modified_image[:, :, 1] *= 1 + temperature * 0.4
-            #     elif temperature < 0:
-            #         modified_image[:, :, 0] *= 1 + temperature * 0.2
-            #         modified_image[:, :, 2] *= 1 - temperature
+                tensor_image = image.numpy()
+                modified_image = Image.fromarray((tensor_image * 255).astype(np.uint8))
+                modified_image = np.array(modified_image).astype(np.float32)
+                if temperature > 0:
+                    modified_image[:, :, 0] *= 1 + temperature
+                    modified_image[:, :, 1] *= 1 + temperature * 0.4
+                elif temperature < 0:
+                    modified_image[:, :, 0] *= 1 + temperature * 0.2
+                    modified_image[:, :, 2] *= 1 - temperature
 
-            #     modified_image = np.clip(modified_image, 0, 255)
-            #     modified_image = modified_image.astype(np.uint8)
-            #     modified_image = modified_image / 255
-            #     modified_image = torch.from_numpy(modified_image).unsqueeze(0)
-            #     i = modified_image
+                modified_image = np.clip(modified_image, 0, 255)
+                modified_image = modified_image.astype(np.uint8)
+                modified_image = modified_image / 255
+                image = torch.from_numpy(modified_image).unsqueeze(0)
             
             # apply HSV, [takes in tensor][gives out PIL]
             _h, _s, _v = tensor2pil(image).convert('HSV').split()
@@ -607,7 +607,7 @@ class GeminiVision:
 
         genai.configure(api_key=config["GEMINI_API_KEY"])
         llm = genai.GenerativeModel(model_name="gemini-1.5-flash", generation_config=genai.GenerationConfig(temperature=randomness))
-        response = llm.generate_content([prompt, pil_image])
+        response = llm.generate_content([pil_image, prompt])
         return (response.text,)
 
 
