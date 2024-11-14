@@ -8,16 +8,28 @@ from .blendmodes import *
 
 #_________from layer_style nodes________
 def tensor2pil(tensor) -> Image:
+    """
+    converts a pytorch tensor to PIL image format.
+    """
     return Image.fromarray(np.clip(255.0 * tensor.cpu().numpy().squeeze(), 0, 255).astype(np.uint8))
 
 def pil2tensor(image : Image):
+    """
+    converts a PIL image to pytorch tensor format.
+    """
     return torch.from_numpy(np.array(image).astype(np.float32) / 255.0).unsqueeze(0)
 
 def pil2cv2(pil_img:Image) -> np.array:
+    """
+    converts a PIL image to cv2 format.
+    """
     np_img_array = np.asarray(pil_img)
     return cv2.cvtColor(np_img_array, cv2.COLOR_RGB2BGR)
 
 def cv22pil(cv2_img:np.ndarray) -> Image:
+    """
+    converts a cv2 image to PIL image format.
+    """
     cv2_img = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2RGB)
     return Image.fromarray(cv2_img)
 
@@ -28,6 +40,19 @@ def color_balance(image:Image, shadows:list, midtones:list, highlights:list,
                   shadow_center:float=0.15, midtone_center:float=0.5, highlight_center:float=0.8,
                   shadow_max:float=0.1, midtone_max:float=0.3, highlight_max:float=0.2,
                   preserve_luminosity:bool=False) -> Image:
+    """
+    color balances a PIL image with the following params:
+    shadows : 
+    midtones : 
+    highlights :
+    shadow_center :
+    midtone_center :
+    highlight_center :
+    shadow_max :
+    midtone_max :
+    highlight_max :
+    preserve_luminosity : 
+    """
 
     img = pil2tensor(image)
     # Create a copy of the img tensor

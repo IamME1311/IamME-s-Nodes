@@ -581,7 +581,8 @@ class GeminiVision:
                 "image" : ("IMAGE",),
                 "seed" : ("INT", {"forceInput":True}),
                 "randomness" : ("FLOAT", {"default":0.7, "min":0, "max": 1, "step":0.1, "display":"slider"}),
-                "output_tokens" : ("INT", {"min":0, "max":500, "step":1}),
+                "api_key" : ("STRING", {"default":""}),
+                # "output_tokens" : ("INT", {"min":0, "max":500, "step":1}),
                 "prompt" : ("STRING", {"default":"Describe the image", "multiline":True})
             }
         }
@@ -595,17 +596,22 @@ class GeminiVision:
                    seed:int, 
                    randomness:float, 
                    prompt:str, 
-                   output_tokens:int=None
-                   ) -> tuple:
+                   api_key:str,
+                #    output_tokens:int=None
+                   ) -> tuple[str,]:
         cwd = Path(__file__).parent
 
-        with open(f"{cwd}\config.yaml", "r") as f:
-            config = yaml.safe_load(f)
+        # with open(f"{cwd}\config.yaml", "r") as f:
+        #     config = yaml.safe_load(f)
         pil_image = tensor2pil(image)
 
         # sys_prompt = ""
 
-        genai.configure(api_key=config["GEMINI_API_KEY"])
+        try:
+        # genai.configure(api_key=config["GEMINI_API_KEY"])
+            genai.configure(api_key=api_key)
+        except Exception as e:
+            raise (f"Error configuring gemini model : {e}")
         llm = genai.GenerativeModel(model_name="gemini-1.5-flash", generation_config=genai.GenerationConfig(temperature=randomness))
         response = llm.generate_content([pil_image, prompt])
         return (response.text,)
