@@ -904,6 +904,7 @@ class SaveImageAdvanced:
                 "images" : ("IMAGE",),
                 "parent_folder" : ("STRING", {"default":""}),
                 "subfolder_name" : ("STRING",{"default":""}),
+                "overwrite" : ("BOOLEAN", {"default":False}),
                 "file_name" : ("STRING", {"default":""}),
                 "format" : (["png", "jpg", "jpeg"], {"default":"jpg"}),
                 "quality" : ("INT", {"default":75, "min":0, "max":100}),
@@ -920,7 +921,8 @@ class SaveImageAdvanced:
     def save_image(self, 
                    images:torch.Tensor, 
                    parent_folder:str, 
-                   subfolder_name:str, 
+                   subfolder_name:str,
+                   overwrite:bool, 
                    file_name:str, 
                    format:str, 
                    quality:int, 
@@ -939,10 +941,20 @@ class SaveImageAdvanced:
             subfolder_path.mkdir(exist_ok=True)
             file_name = file_name + "." + format
 
-            if format in ["jpg", "jpeg"]:
-                img.save(subfolder_path.joinpath(file_name),  quality=quality, dpi=(dpi, dpi))
-            else: #png case
-                img.save(subfolder_path.joinpath(file_name), dpi=(dpi, dpi))
+            save_path = subfolder_path.joinpath(file_name)
+            if overwrite:
+                if format in ["jpg", "jpeg"]:
+                    img.save(save_path,  quality=quality, dpi=(dpi, dpi))
+                else: #png case
+                    img.save(save_path, dpi=(dpi, dpi))
+            else:
+                if save_path.exists():
+                    raise ValueError("This filename already exsists in the provided folder!!")
+                else:
+                    if format in ["jpg", "jpeg"]:
+                        img.save(save_path,  quality=quality, dpi=(dpi, dpi))
+                    else: #png case
+                        img.save(save_path, dpi=(dpi, dpi))
         return (file_name,)
     
 
