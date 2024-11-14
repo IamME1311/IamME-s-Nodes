@@ -10,7 +10,7 @@ import math
 from .utils import *
 from .image_utils import *
 
-
+PACK_NAME = "IamME"
 
 
 class AspectEmptyLatentImage:
@@ -36,7 +36,7 @@ class AspectEmptyLatentImage:
     OUTPUT_TOOLTIPS = ("The empty latent image batch.",)
     FUNCTION = "aspect_latent_gen"
 
-    CATEGORY = "IamME"
+    CATEGORY = PACK_NAME
     DESCRIPTION = "Create a new batch of empty latent images to be denoised via sampling."
 
     def aspect_latent_gen(self, 
@@ -150,7 +150,7 @@ class ColorCorrect:
     
     RETURN_TYPES = ("IMAGE",)
     RETURN_NAMES = ("images",)
-    CATEGORY = "IamME"
+    CATEGORY = PACK_NAME
     FUNCTION = "ColorCorrect"
 
     def ColorCorrect(self,
@@ -305,7 +305,7 @@ class ConnectionBus:
 
     RETURN_TYPES = (BUS_DATA["type"], any_type, any_type, any_type, any_type, any_type, any_type, any_type, any_type, any_type, any_type,)
     RETURN_NAMES = (BUS_DATA["name"], "value_1", "value_2", "value_3", "value_4", "value_5", "value_6", "value_7", "value_8", "value_9", "value_10",)
-    CATEGORY = "IamME"
+    CATEGORY = PACK_NAME
     FUNCTION = "HandleBus"
     # value_1, value_2, value_3, value_4, value_5, value_6, value_7, value_8, value_9, value_10
     def HandleBus(self, 
@@ -381,7 +381,7 @@ class FacePromptMaker:
     
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("Prompt",)
-    CATEGORY = "IamME"
+    CATEGORY = PACK_NAME
     FUNCTION = "PromptMaker"
 
     def PromptMaker(self, seed:int, 
@@ -588,7 +588,7 @@ class GeminiVision:
         }
 
     RETURN_TYPES = ("STRING",)
-    CATEGORY = 'IamME'
+    CATEGORY = PACK_NAME
     FUNCTION = 'gen_gemini'
 
     def gen_gemini(self, 
@@ -630,7 +630,7 @@ class GetImageData:
     RETURN_TYPES = ("IMAGE", "INT", "INT", "STRING", IMAGE_DATA["type"])
     RETURN_NAMES = ("Image", "Width", "Height", "Aspect Ratio", IMAGE_DATA["name"])
     FUNCTION = "getData"
-    CATEGORY = "IamME"
+    CATEGORY = PACK_NAME
 
     def getData(self, Image:torch.Tensor) -> dict:
         width = Image.shape[2]
@@ -670,7 +670,7 @@ class ImageBatchLoader:
     RETURN_TYPES = ("IMAGE", "STRING",)
     RETURN_NAMES = ("images","file name")
     FUNCTION = "ImageLoader"
-    CATEGORY = 'IamME'
+    CATEGORY = PACK_NAME
 
     def ImageLoader(self, folder_path, images_to_load, mode) -> torch.Tensor:
         if self.folder_path != folder_path:
@@ -742,7 +742,7 @@ class LiveTextEditor:
     RETURN_TYPES = ("STRING",)
     FUNCTION = "TextEditor"
     OUTPUT_NODE = True
-    CATEGORY = "IamME"
+    CATEGORY = PACK_NAME
 
     def TextEditor(self, text:str, modify_text:str="", unique_id=None, extra_pnginfo=None) -> dict:
         if unique_id is not None and extra_pnginfo is not None:
@@ -791,7 +791,7 @@ class TextTransformer:
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("text",)
     FUNCTION = 'texttransformer'
-    CATEGORY = 'IamME'
+    CATEGORY = PACK_NAME
 
     def texttransformer(self, text:str, replace:bool, prepend:str="", append:str="", to_replace:str="", replace_with:str="") -> str:
         text = prepend + " " + text
@@ -819,7 +819,7 @@ class TriggerWordProcessor:
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("processed_text",)
     FUNCTION = 'TextProcessor'
-    CATEGORY = 'IamME'
+    CATEGORY = PACK_NAME
     # OUTPUT_NODE = True
 
     def TextProcessor(self, text_in:str, gender:str, seed:int=None) -> tuple:
@@ -914,7 +914,7 @@ class SaveImageAdvanced:
     
     RETURN_TYPES = (any_type,)
     RETURN_NAMES = ("opt",)
-    CATEGORY = "IamME"
+    CATEGORY = PACK_NAME
     FUNCTION = "save_image"
     OUTPUT_NODE =True
 
@@ -975,15 +975,15 @@ NODE_CLASS_MAPPINGS = {
 
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "AspectEmptyLatentImage" : "AspectEmptyLatentImage",
-    "LiveTextEditor" : "LiveTextEditor",
-    "FacePromptMaker": "FacePromptMaker",
-    "TriggerWordProcessor" : "TriggerWordProcessor",
-    "BasicTextEditor" : "BasicTextEditor",
-    "GeminiVision":"GeminiVision",
-    "ImageBatchLoader":"ImageBatchLoader",
-    "GetImageData":"GetImageData",
-    "ConnectionBus":"ConnectionBus",
-    "SaveImageAdvanced":"SaveImageAdvanced",
-    "ColorCorrect":"Color Correct"
+    "AspectEmptyLatentImage" : PACK_NAME + " AspectEmptyLatent",
+    "LiveTextEditor" : PACK_NAME + " LiveTextEditor",
+    "FacePromptMaker": PACK_NAME + " FacePromptMaker",
+    "TriggerWordProcessor" : PACK_NAME + " TriggerWordProcessor",
+    "BasicTextEditor" : PACK_NAME + " BasicTextEditor",
+    "GeminiVision": PACK_NAME + " GeminiVision",
+    "ImageBatchLoader": PACK_NAME + " ImageBatchLoader",
+    "GetImageData": PACK_NAME + " GetImageData",
+    "ConnectionBus": PACK_NAME + " ConnectionBus",
+    "SaveImageAdvanced":PACK_NAME + " SaveImageAdvanced",
+    "ColorCorrect":PACK_NAME + " ColorCorrect"
 }
