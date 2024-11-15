@@ -771,6 +771,16 @@ class LiveTextEditor:
         return {"ui": {"text": text}, "result": (out_text,)}
 
 
+class ModelManager:
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return{
+            "required" : {
+                "model_name" : ("STRING")
+            }
+        }
+
 class TextTransformer:
 
     @classmethod
@@ -905,10 +915,10 @@ class SaveImageAdvanced:
                 "parent_folder" : ("STRING", {"default":""}),
                 "subfolder_name" : ("STRING",{"default":""}),
                 "overwrite" : ("BOOLEAN", {"default":False}),
-                "file_name" : ("STRING", {"default":""}),
                 "format" : (["png", "jpg", "jpeg"], {"default":"jpg"}),
                 "quality" : ("INT", {"default":75, "min":0, "max":100}),
-                "dpi" : ("INT", {"default":300, "min":1, "max":2400})
+                "dpi" : ("INT", {"default":300, "min":1, "max":2400}),
+                "file_name" : ("STRING", {"default":"", "multiline": True})
             }
         }
     
