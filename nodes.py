@@ -1060,7 +1060,7 @@ class SaveImageAdvanced:
             subfolder_path.mkdir(exist_ok=True)
             file_name = f"{subfolder_name}_{file_name_suffix}.{format}`"
 
-            save_path = subfolder_path.joinpath(file_name_suffix)
+            save_path = subfolder_path.joinpath(file_name)
             if overwrite:
                 if format in ["jpg", "jpeg"]:
                     img.save(save_path,  quality=quality, dpi=(dpi, dpi))
