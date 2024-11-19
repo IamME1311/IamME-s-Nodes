@@ -1,5 +1,6 @@
-from re import T
 import comfy
+import server
+from aiohttp import web
 import math
 import random
 import google.generativeai as genai
@@ -9,9 +10,14 @@ from pathlib import Path
 import math
 from .utils import *
 from .image_utils import *
+import requests
+from tqdm import tqdm
+import re
+import logging
 
 PACK_NAME = "IamME"
-
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class AspectEmptyLatentImage:
     def __init__(self):
@@ -580,6 +586,7 @@ class GeminiVision:
             "required" : {
                 "image" : ("IMAGE",),
                 "seed" : ("INT", {"forceInput":True}),
+                "clip" : ("CLIP",),
                 "randomness" : ("FLOAT", {"default":0.7, "min":0, "max": 1, "step":0.1, "display":"slider"}),
                 "api_key" : ("STRING", {"default":""}),
                 # "output_tokens" : ("INT", {"min":0, "max":500, "step":1}),
@@ -587,19 +594,21 @@ class GeminiVision:
             }
         }
 
-    RETURN_TYPES = ("STRING",)
+    RETURN_TYPES = ("STRING", "CONDITIONING", )
     CATEGORY = PACK_NAME
     FUNCTION = 'gen_gemini'
 
     def gen_gemini(self, 
                    image:torch.Tensor, 
-                   seed:int, 
+                   seed:int,
+                   clip:object, 
                    randomness:float, 
                    prompt:str, 
                    api_key:str,
                 #    output_tokens:int=None
-                   ) -> tuple[str,]:
-        cwd = Path(__file__).parent
+                   ) -> tuple[str, list]:
+        
+        # cwd = Path(__file__).parent
 
         # with open(f"{cwd}\config.yaml", "r") as f:
         #     config = yaml.safe_load(f)
@@ -614,7 +623,10 @@ class GeminiVision:
             raise (f"Error configuring gemini model : {e}")
         llm = genai.GenerativeModel(model_name="gemini-1.5-flash", generation_config=genai.GenerationConfig(temperature=randomness))
         response = llm.generate_content([pil_image, prompt])
-        return (response.text,)
+        tokens = clip.tokenize(response.text)
+        output = clip.encode_from_tokens(tokens, return_pooled=True, return_dict=True)
+        cond = output.pop("cond")
+        return (response.text, [[cond, output]],)
 
 
 class GetImageData:
@@ -772,15 +784,113 @@ class LiveTextEditor:
 
 
 class ModelManager:
-
     @classmethod
     def INPUT_TYPES(s):
         return{
             "required" : {
-                "model_name" : ("STRING")
+                "civitAI_model_link" : ("STRING", {"default":"", "multiline":True})
             }
         }
+    
+    RETURN_TYPES = ("STRING", "STRING")
+    RETURN_NAMES = ("data", "dl_link")
+    CATEGORY = PACK_NAME
+    FUNCTION = "model_downloader"
+    OUTPUT_NODE = True
 
+    def download_model_with_progress(self, download_link: str, model_name: str, auth_token: str) -> None:
+        print(f"Starting download for {model_name} from {download_link}")
+        headers = {
+            "Authorization": f"Bearer {auth_token}"
+        }
+        
+        if not model_name.endswith('.safetensors'):
+            model_name = f"{model_name}.safetensors"
+        
+        try:
+            response = requests.get(
+                download_link,
+                headers=headers,
+                allow_redirects=True,
+                stream=True
+            )
+            response.raise_for_status()
+            
+            # Get the file size from headers
+            total_size = int(response.headers.get('content-length', 0))
+            
+            # Create progress bar
+            with open(model_name, 'wb') as f, tqdm(
+                desc=model_name,
+                total=total_size,
+                unit='iB',
+                unit_scale=True,
+                unit_divisor=1024,
+            ) as pbar:
+                for chunk in response.iter_content(chunk_size=8192):
+                    size = f.write(chunk)
+                    pbar.update(size)
+                    
+            print(f"Successfully downloaded {model_name}")
+            
+        except requests.exceptions.RequestException as e:
+            print(f"Error downloading file: {e}")
+            raise
+
+    def link_processor(self, link:str)->str:
+        pattern = r'https://civitai.com/models/(\d+)(?:/|(?:\?modelVersionId=\d+))'
+        match = re.search(pattern, link)
+        if match:
+            model_id = match.group(1)
+        else:
+            logger.log(level=30, msg=f"##{PACK_NAME}'s Nodes : model_id not found in given URL")
+            raise
+
+        return model_id
+
+    def model_downloader(self, civitAI_model_link:str) -> dict:
+        print(f"model_downloader called with link: {civitAI_model_link}")
+
+        this_file_path = Path(__file__)
+        checkpoints_path = this_file_path.parent.parent.parent.joinpath("models/checkpoints")
+
+        if not checkpoints_path.exists() and checkpoints_path.is_dir():
+            raise ValueError("Checkpoints path not located!!")
+        
+        civitai_auth_token = "dde477748946d47366ce09db94b81584"
+        model_names = []
+
+        try:
+            url = f"https://civitai.com/api/v1/models/{self.link_processor(civitAI_model_link)}"
+            response = requests.get(url, headers={"Accept":"application/json"})
+            response.raise_for_status()
+            
+            response_json = response.json()
+
+            for value in response_json["modelVersions"]:
+                model_info = {
+                    "id": value["id"],
+                    "name": value["files"][0]["name"],
+                    "type": value["files"][0]["type"],
+                    "metadata": value["files"][0]["metadata"],
+                    "dl_link": value["files"][0]["downloadUrl"]
+                }
+                if all(key in value["files"][0]["metadata"] for key in ("format", "size", "fp")):
+                    model_info["download_url"] = value["files"][0]["downloadUrl"] + f"?type={value['files'][0]['type']}" + f"&format={value['files'][0]['metadata']['format']}" + f"&size={value['files'][0]['metadata']['size']}" + f"&fp={value['files'][0]['metadata']['fp']}"
+                else:
+                    continue
+                model_names.append(model_info)    
+
+        except Exception as e:
+            print(f"Error in model_downloader: {str(e)}")  # Debug log
+            raise
+        return {
+            "ui" : {
+                "names" : model_names,
+            },
+            "result" : (str(model_names), str([m["download_url"] for m in model_names]))
+        }
+    
 class TextTransformer:
 
     @classmethod
@@ -904,7 +1014,6 @@ class TriggerWordProcessor:
             
         return (text_in,)
     
-
 class SaveImageAdvanced:
 
     @classmethod
@@ -918,7 +1027,7 @@ class SaveImageAdvanced:
                 "format" : (["png", "jpg", "jpeg"], {"default":"jpg"}),
                 "quality" : ("INT", {"default":75, "min":0, "max":100}),
                 "dpi" : ("INT", {"default":300, "min":1, "max":2400}),
-                "file_name" : ("STRING", {"default":"", "multiline": True})
+                "file_name_suffix" : ("STRING", {"default":"", "multiline": True})
             }
         }
     
@@ -933,7 +1042,7 @@ class SaveImageAdvanced:
                    parent_folder:str, 
                    subfolder_name:str,
                    overwrite:bool, 
-                   file_name:str, 
+                   file_name_suffix:str, 
                    format:str, 
                    quality:int, 
                    dpi:int
@@ -949,9 +1058,9 @@ class SaveImageAdvanced:
             subfolder_path = parent_path.joinpath(subfolder_name)
 
             subfolder_path.mkdir(exist_ok=True)
-            file_name = file_name + "." + format
+            file_name = f"{subfolder_name}_{file_name_suffix}.{format}`"
 
-            save_path = subfolder_path.joinpath(file_name)
+            save_path = subfolder_path.joinpath(file_name_suffix)
             if overwrite:
                 if format in ["jpg", "jpeg"]:
                     img.save(save_path,  quality=quality, dpi=(dpi, dpi))
@@ -980,7 +1089,8 @@ NODE_CLASS_MAPPINGS = {
     "GetImageData":GetImageData,
     "ConnectionBus":ConnectionBus,
     "SaveImageAdvanced":SaveImageAdvanced,
-    "ColorCorrect" : ColorCorrect
+    "ColorCorrect" : ColorCorrect, 
+    "ModelManager" : ModelManager
 }
 
 
@@ -995,5 +1105,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "GetImageData": PACK_NAME + " GetImageData",
     "ConnectionBus": PACK_NAME + " ConnectionBus",
     "SaveImageAdvanced":PACK_NAME + " SaveImageAdvanced",
-    "ColorCorrect":PACK_NAME + " ColorCorrect"
+    "ColorCorrect":PACK_NAME + " ColorCorrect",
+    "ModelManager" : PACK_NAME + " ModelManager"
 }
