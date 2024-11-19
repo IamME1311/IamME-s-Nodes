@@ -2,34 +2,6 @@ import { app } from "../../scripts/app.js";
 import { ComfyWidgets } from "../../scripts/widgets.js";
 
 
-// function recursiveLinkUpstream(node, type, depth, index=null) {
-// 	depth += 1
-// 	let connections = []
-// 	const inputList = (index !== null) ? [index] : [...Array(node.inputs.length).keys()]
-// 	if (inputList.length === 0) { return }
-// 	for (let i of inputList) {
-// 		const link = node.inputs[i].link
-// 		if (link) {
-// 			const nodeID = node.graph.links[link].origin_id
-// 			const slotID = node.graph.links[link].origin_slot
-// 			const connectedNode = node.graph._nodes_by_id[nodeID]
-
-// 			if (connectedNode.outputs[slotID].type === type) {
-
-// 				connections.push([connectedNode.id, depth])
-
-// 				if (connectedNode.inputs) {
-// 					const index = (connectedNode.type === "LatentComposite") ? 0 : null
-// 					connections = connections.concat(recursiveLinkUpstream(connectedNode, type, depth, index))
-// 				} else {
-					
-// 				}
-// 			}
-// 		}
-// 	}
-// 	return connections
-// }
-
 app.registerExtension({
 	name: "IamMEsNodes.nodes_js",
 	async beforeRegisterNodeDef(nodeType, nodeData, app) {
@@ -172,30 +144,30 @@ app.registerExtension({
                 
             case "ColorCorrect":
                 nodeType.prototype.onNodeCreated = function () {
-                this._type = "IMAGE"
-                this.inputs_offset = nodeData.name.includes("selective")?1:0
-                this.addWidget("button", "Reset Values", null, () => {
-                    const defaults = {
-                        "gamma": 1,
-                        "contrast": 1,
-                        "exposure": 0,
-                        "temperature":0.0,
-                        "hue": 0,
-                        "saturation": 0,
-                        "value": 0,
-                        "cyan_red": 0,
-                        "magenta_green": 0,
-                        "yellow_blue": 0
-                    };
-                
-                    for (const widget of this.widgets) {
-                        if (widget.type !== "button" && defaults.hasOwnProperty(widget.name)) {
-                            widget.value = defaults[widget.name];
+                    this._type = "IMAGE"
+                    this.inputs_offset = nodeData.name.includes("selective")?1:0
+                    this.addWidget("button", "Reset Values", null, () => {
+                        const defaults = {
+                            "gamma": 1,
+                            "contrast": 1,
+                            "exposure": 0,
+                            "temperature":0.0,
+                            "hue": 0,
+                            "saturation": 0,
+                            "value": 0,
+                            "cyan_red": 0,
+                            "magenta_green": 0,
+                            "yellow_blue": 0
+                        };
+                    
+                        for (const widget of this.widgets) {
+                            if (widget.type !== "button" && defaults.hasOwnProperty(widget.name)) {
+                                widget.value = defaults[widget.name];
+                            }
                         }
-                    }
-                    // Force a node update if needed
-                    this.onNodeChanged?.();  // or this.onPropertyChanged?.();
-                });
+                        // Force a node update if needed
+                        this.onNodeChanged?.();  // or this.onPropertyChanged?.();
+                    });
                 }
                 break;
         
@@ -314,7 +286,37 @@ app.registerExtension({
                     return connectedNodes;
                 };
                 break;
-     
+                
+            case "ModelManager":
+                
+                const onModelManagerExecuted = nodeType.prototype.onExecuted;
+                nodeType.prototype.onExecuted = function (message) {
+                    console.log("ModelManager onExecuted called", message);
+                    const state = onModelManagerExecuted ? onModelManagerExecuted.apply(this, arguments):undefined
+                    
+                    // remove extra buttons
+                    if (this.widgets.length > 2){
+                        for (let i=2; i < this.widgets.length; i++){
+                            if (this.widgets[i].type === "button"){
+                                this.widgets[i]?.onRemove?.();
+                            }
+                        }
+                        this.widgets.length = 2
+                    }
+
+                    if (message && message.names && Array.isArray(message.names)){
+                        console.log("Creating buttons for models:", message.names);
+                        message.names.forEach((model, index)=>{
+                            this.addWidget("button", model.name, null, () =>{
+                                console.log(`Button clicked for model: ${model.name}`);
+                                
+                            });
+                        });
+                    }
+                    this.setDirtyCanvas(true, true);
+                    return state
+                }
+                break;
 
         }
     }

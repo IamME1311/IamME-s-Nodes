@@ -1,11 +1,8 @@
 import comfy
-import server
-from aiohttp import web
 import math
 import random
 import google.generativeai as genai
 from PIL import ImageOps
-import yaml
 from pathlib import Path
 import math
 from .utils import *
@@ -1058,7 +1055,7 @@ class SaveImageAdvanced:
             subfolder_path = parent_path.joinpath(subfolder_name)
 
             subfolder_path.mkdir(exist_ok=True)
-            file_name = f"{subfolder_name}_{file_name_suffix}.{format}`"
+            file_name = f"{subfolder_name}_{file_name_suffix}.{format}"
 
             save_path = subfolder_path.joinpath(file_name)
             if overwrite:
