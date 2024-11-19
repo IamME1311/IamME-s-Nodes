@@ -1,4 +1,5 @@
 import { app } from "../../scripts/app.js";
+import { api } from "../../scripts/api.js";
 import { ComfyWidgets } from "../../scripts/widgets.js";
 
 
@@ -288,6 +289,37 @@ app.registerExtension({
                 break;
                 
             case "ModelManager":
+                function downloadModel(modelName, downloadUrl) {
+                    try {
+                        // Get the node's ID from the graph
+                        const nodeId = this.id;
+                        console.log("downloadModel called");
+                        // Construct the API call to ComfyUI's server
+                        return api.fetchApi('/execute', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                node_id: nodeId,
+                                action: "download_model",
+                                model_Name: modelName,
+                                download_Url : downloadUrl
+                            })
+                        })
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Download failed');
+                            }
+                            console.log(`Download started for model: ${modelName}`);
+                        })
+                        .catch(error => {
+                            console.error(`Error downloading model try: ${error}`);
+                        });
+                    } catch (error) {
+                        console.error(`Error downloading model: ${error}`);
+                    }
+                }
                 
                 const onModelManagerExecuted = nodeType.prototype.onExecuted;
                 nodeType.prototype.onExecuted = function (message) {
@@ -306,10 +338,10 @@ app.registerExtension({
 
                     if (message && message.names && Array.isArray(message.names)){
                         console.log("Creating buttons for models:", message.names);
-                        message.names.forEach((model, index)=>{
+                        message.names.forEach((model)=>{
                             this.addWidget("button", model.name, null, () =>{
                                 console.log(`Button clicked for model: ${model.name}`);
-                                
+                                downloadModel.call(model.name, model.download_url);
                             });
                         });
                     }

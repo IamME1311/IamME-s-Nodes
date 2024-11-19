@@ -1,4 +1,5 @@
 import comfy
+from server import PromptServer
 import math
 import random
 import google.generativeai as genai
@@ -781,6 +782,9 @@ class LiveTextEditor:
 
 
 class ModelManager:
+    def __init__(self):
+        self.civitai_auth_token = "dde477748946d47366ce09db94b81584"
+
     @classmethod
     def INPUT_TYPES(s):
         return{
@@ -795,10 +799,26 @@ class ModelManager:
     FUNCTION = "model_downloader"
     OUTPUT_NODE = True
 
-    def download_model_with_progress(self, download_link: str, model_name: str, auth_token: str) -> None:
+    @PromptServer.instance.routes.get("/execute")
+    async def handle_event(self, event_type, event_data):
+        if event_type == "download_model":
+            model_name = event_data.get("model_Name")
+            downlad_url = event_data.get("download_Url")
+            try:
+                self.download_model_with_progress(
+                    download_link=downlad_url,
+                    model_name=model_name
+                )
+                return {"status": "success", "message": f"Downloaded model: {model_name}"}
+            except Exception as e:
+                print(f"Error in downloading model: {e}")
+                return {"status": "error", "message": str(e)}
+        return {"status": "error", "message": "Invalid event type"}
+
+    def download_model_with_progress(self, download_link: str, model_name: str) -> None:
         print(f"Starting download for {model_name} from {download_link}")
         headers = {
-            "Authorization": f"Bearer {auth_token}"
+            "Authorization": f"Bearer {self.civitai_auth_token}"
         }
         
         if not model_name.endswith('.safetensors'):
@@ -854,7 +874,6 @@ class ModelManager:
         if not checkpoints_path.exists() and checkpoints_path.is_dir():
             raise ValueError("Checkpoints path not located!!")
         
-        civitai_auth_token = "dde477748946d47366ce09db94b81584"
         model_names = []
 
         try:
@@ -887,6 +906,7 @@ class ModelManager:
             },
             "result" : (str(model_names), str([m["download_url"] for m in model_names]))
         }
+   
     
 class TextTransformer:
 
@@ -1010,7 +1030,8 @@ class TriggerWordProcessor:
                 text_in = text_in.replace(word, body_type)
             
         return (text_in,)
-    
+
+
 class SaveImageAdvanced:
 
     @classmethod
@@ -1087,7 +1108,7 @@ NODE_CLASS_MAPPINGS = {
     "ConnectionBus":ConnectionBus,
     "SaveImageAdvanced":SaveImageAdvanced,
     "ColorCorrect" : ColorCorrect, 
-    "ModelManager" : ModelManager
+    # "ModelManager" : ModelManager
 }
 
 
@@ -1103,5 +1124,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ConnectionBus": PACK_NAME + " ConnectionBus",
     "SaveImageAdvanced":PACK_NAME + " SaveImageAdvanced",
     "ColorCorrect":PACK_NAME + " ColorCorrect",
-    "ModelManager" : PACK_NAME + " ModelManager"
+    # "ModelManager" : PACK_NAME + " ModelManager"
 }
