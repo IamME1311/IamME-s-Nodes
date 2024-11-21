@@ -1,3 +1,5 @@
+import base64
+import io
 from PIL import Image, ImageEnhance, ImageChops
 import cv2
 import torch
@@ -7,7 +9,7 @@ from .blendmodes import *
 
 
 #_________from layer_style nodes________
-def tensor2pil(tensor) -> Image:
+def tensor2pil(tensor:torch.Tensor) -> Image:
     """
     converts a pytorch tensor to PIL image format.
     """
@@ -167,3 +169,15 @@ def chop_image_v2(background_image:Image, layer_image:Image, blend_mode:str, opa
     # return tensor2pil(_tensor)
 
     return Image.fromarray(np.uint8(blended_np)).convert('RGB')
+
+
+############################################################################
+def tensor2base64(images:torch.Tensor) -> list:
+    images_b64 = []
+    for image in images:
+        img = tensor2pil(image)
+        buffered = io.BytesIO()
+        img.save(buffered, format="PNG")
+        img_bytes = base64.b64encode(buffered.getvalue()).decode("utf-8")
+        images_b64.append(img_bytes)
+    return images_b64

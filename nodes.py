@@ -3,6 +3,7 @@ from server import PromptServer
 import math
 import random
 import google.generativeai as genai
+from langchain_community.llms.ollama import Ollama
 from PIL import ImageOps
 from pathlib import Path
 import math
@@ -12,6 +13,7 @@ import requests
 from tqdm import tqdm
 import re
 import logging
+import time
 
 PACK_NAME = "IamME"
 logging.basicConfig(level=logging.INFO)
@@ -908,6 +910,53 @@ class ModelManager:
         }
    
     
+class OllamaVision:
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required" : {
+                "image" : ("IMAGE",),
+                "seed" : ("INT", {"forceInput":True}),
+                "clip" : ("CLIP",),
+                "randomness" : ("FLOAT", {"default":0.7, "min":0, "max": 1, "step":0.1, "display":"slider"}),
+                "prompt" : ("STRING", {"default":"Describe the image", "multiline":True})
+            }, 
+            "optional" : {
+                "opt_model_name" : ("STRING", {"default":"llama3.2-vision:latest", "tooltip":"an optional input, write the name of ollama model you wanna use!!"})
+            }
+        }
+
+    RETURN_TYPES = ("STRING", "CONDITIONING", )
+    CATEGORY = PACK_NAME
+    FUNCTION = 'gen_ollama'
+
+    def gen_ollama(self, 
+                    image:torch.Tensor, 
+                    seed:int,
+                    clip:object, 
+                    prompt:str,
+                    randomness:float,
+                    opt_model_name:str = "llama3.2-vision:latest"
+                    ) -> tuple[str, list]:
+
+        # sys_prompt = ""
+        print(f"##{PACK_NAME}'s Nodes : model name is {opt_model_name}")
+        image_b64:list = tensor2base64(image)
+        print(f"##{PACK_NAME}'s Nodes : Converted tensor image to base64")
+        start_time = time.time()
+        llm = Ollama(model=opt_model_name, base_url="http://192.168.0.169:11434", temperature=randomness).bind(images=image_b64)
+        response = llm.invoke(prompt)
+        end_time = time.time()
+        print(f"##{PACK_NAME}'s Nodes : generated response, time taken = {end_time-start_time}")
+        tokens = clip.tokenize(response)
+        output = clip.encode_from_tokens(tokens, return_pooled=True, return_dict=True)
+        cond = output.pop("cond")
+        print(f"##{PACK_NAME}'s Nodes : Node executed!!")
+        return (response, [[cond, output]],)   
+
+
+
 class TextTransformer:
 
     @classmethod
@@ -1107,7 +1156,8 @@ NODE_CLASS_MAPPINGS = {
     "GetImageData":GetImageData,
     "ConnectionBus":ConnectionBus,
     "SaveImageAdvanced":SaveImageAdvanced,
-    "ColorCorrect" : ColorCorrect, 
+    "ColorCorrect" : ColorCorrect,
+    "OllamaVision":OllamaVision 
     # "ModelManager" : ModelManager
 }
 
@@ -1122,7 +1172,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ImageBatchLoader": PACK_NAME + " ImageBatchLoader",
     "GetImageData": PACK_NAME + " GetImageData",
     "ConnectionBus": PACK_NAME + " ConnectionBus",
-    "SaveImageAdvanced":PACK_NAME + " SaveImageAdvanced",
-    "ColorCorrect":PACK_NAME + " ColorCorrect",
+    "SaveImageAdvanced": PACK_NAME + " SaveImageAdvanced",
+    "ColorCorrect": PACK_NAME + " ColorCorrect",
+    "OllamaVision": PACK_NAME + " OllamaVision"
     # "ModelManager" : PACK_NAME + " ModelManager"
 }

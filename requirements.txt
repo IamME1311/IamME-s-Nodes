@@ -3,3 +3,4 @@ numpy
 google-generativeai
 pyyaml
 torchaudio
+langchain-community
