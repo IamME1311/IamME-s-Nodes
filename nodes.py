@@ -45,15 +45,26 @@ class IamME_Database:
             with open(self.main_db_path, "r") as f:
                 data:list = json.load(f)
             f.close()
+            if not data.__class__.__name__ == "list":
+                raise TypeError(f"#{PACK_NAME}'s Nodes : database file is not in correct format")
+
+            with open(self.main_db_path, "w") as f:
+                data.append({"datetime":datetime.now().strftime("%B %d, %Y %I:%M %p"), input_prompt:output_prompt})
+                f.write(json.dumps(data)) # save to file
+            f.close()
+
         elif self.type == "temp":
             with open(self.temp_db_path, "r") as f:
                 data:list = json.load(f)
-
-        if not data.__class__.__name__ == "list":
+            f.close()
+            if not data.__class__.__name__ == "list":
                 raise TypeError(f"#{PACK_NAME}'s Nodes : database file is not in correct format")
-        
-        data.append({"datetime":datetime.now().strftime("%B %d, %Y %I:%M %p"), input_prompt:output_prompt})
-        f.close()
+
+            with open(self.temp_db_path, "w") as f:
+                data.append({"datetime":datetime.now().strftime("%B %d, %Y %I:%M %p"), input_prompt:output_prompt})
+                f.write(json.dumps(data)) # save to file
+            f.close()
+
         print(f"#{PACK_NAME}'s Nodes : {self.type} database updated")
 
     def delete_temp_db(self) -> None:
@@ -70,7 +81,7 @@ class IamME_Database:
 
     def merge_DB(self) -> None:
         """Merge temp and main database"""
-        if self.temp_db_path.exists():
+        if self.type=="temp" and self.temp_db_path.exists():
             print(f"#{PACK_NAME}'s Nodes : merging databases")
             with open(self.temp_db_path, "r") as f:
                 temp_data = json.load(f)
