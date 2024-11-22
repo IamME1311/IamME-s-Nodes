@@ -67,23 +67,24 @@ class IamME_Database:
 
         print(f"#{PACK_NAME}'s Nodes : {self.type} database updated")
 
-    def delete_temp_db(self) -> None:
+    def delete_temp_db(db_path:Path) -> None:
         """ Delete temporary database"""
-        if self.temp_folder_path.exists():
-            for item in self.temp_folder_path.iterdir():
+        if db_path.exists():
+            for item in db_path.parent.iterdir():
                 if item.is_file():
                     item.unlink(missing_ok=True)
         
-            self.temp_folder_path.rmdir()
+            db_path.parent.rmdir()
             print(f"#{PACK_NAME}'s Nodes : Successfully removed temp database")
         else:
             print(f"#{PACK_NAME}'s Nodes : Temp database not found!!")
 
     def merge_DB(self) -> None:
         """Merge temp and main database"""
-        if self.type=="temp" and self.temp_db_path.exists():
+        temp_db_path = Path(__file__).cwd().joinpath(".temp").joinpath("temp_db.json")
+        if temp_db_path.exists() and self.main_folder_path.exists():
             print(f"#{PACK_NAME}'s Nodes : merging databases")
-            with open(self.temp_db_path, "r") as f:
+            with open(temp_db_path, "r") as f:
                 temp_data = json.load(f)
             f.close()
             
@@ -102,7 +103,7 @@ class IamME_Database:
             
             print(f"{PACK_NAME}'s Nodes : Databases merged")
             
-            self.delete_temp_db()
+            self.delete_temp_db(temp_db_path)
         else:
             print(f"{PACK_NAME}'s Nodes : No temp DB to merge with, aborting!!")
             
