@@ -14,17 +14,94 @@ from tqdm import tqdm
 import re
 import logging
 import time
+from datetime import datetime
 
 PACK_NAME = "IamME"
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
+class IamME_Database:
+    def __init__(self) -> None:
+        self.main_folder_path = Path(r"\\sridhar\Myntra_Backup\Prompt Database")
+
+        if not self.main_folder_path.exists() and not self.main_folder_path.is_dir(): # if main path doesn't exist, go for temporary approach
+            self.temp_folder_path = Path(__file__).cwd().joinpath(".temp")
+            self.temp_folder_path.mkdir(exist_ok=True) # make temp folder in current folder
+
+            self.temp_db_path = self.temp_folder_path.joinpath("temp_db.json")
+            self.temp_db_path.touch(exist_ok=True) # make temp db file
+            self.temp_db_path.write_text("[]")
+
+            self.type = "temp"
+        else:
+            self.main_db_path = self.main_folder_path.joinpath("database.json")
+            self.main_db_path.touch(exist_ok=True) # make main db file if it doesn't exist
+            self.type = "main"
+
+    def update_db(self, input_prompt:str, output_prompt:str) -> None:
+        """ Update the current database with input_prompt and output_prompt"""
+        if self.type == "main":
+            with open(self.main_db_path, "r") as f:
+                data:list = json.load(f)
+            f.close()
+        elif self.type == "temp":
+            with open(self.temp_db_path, "r") as f:
+                data:list = json.load(f)
+
+        if not data.__class__.__name__ == "list":
+                raise TypeError(f"#{PACK_NAME}'s Nodes : database file is not in correct format")
+        
+        data.append({"datetime":datetime.now().strftime("%B %d, %Y %I:%M %p"), input_prompt:output_prompt})
+        f.close()
+        print(f"#{PACK_NAME}'s Nodes : {self.type} database updated")
+
+    def delete_temp_db(self) -> None:
+        """ Delete temporary database"""
+        if self.temp_folder_path.exists():
+            for item in self.temp_folder_path.iterdir():
+                if item.is_file():
+                    item.unlink(missing_ok=True)
+        
+            self.temp_folder_path.rmdir()
+            print(f"#{PACK_NAME}'s Nodes : Successfully removed temp database")
+        else:
+            print(f"#{PACK_NAME}'s Nodes : Temp database not found!!")
+
+    def merge_DB(self) -> None:
+        """Merge temp and main database"""
+        if self.temp_db_path.exists():
+            print(f"#{PACK_NAME}'s Nodes : merging databases")
+            with open(self.temp_db_path, "r") as f:
+                temp_data = json.load(f)
+            f.close()
+            
+            with open(self.main_db_path, "r") as m:
+                main_data = json.load(m)
+            m.close()
+            
+            if main_data.__class__.__name__ != "list" or temp_data.__class__.__name__ !="list":
+                raise TypeError(f"#{PACK_NAME}'s Nodes : both database datatypes mismatch!!")
+            
+            main_data = main_data + temp_data
+
+            with open(self.main_db_path, "w") as f:
+                f.write(json.dumps(main_data))
+            f.close()
+            
+            print(f"{PACK_NAME}'s Nodes : Databases merged")
+            
+            self.delete_temp_db()
+        else:
+            print(f"{PACK_NAME}'s Nodes : No temp DB to merge with, aborting!!")
+            
+#____________NODES_____________
 class AspectEmptyLatentImage:
-    def __init__(self):
+    def __init__(self) -> None:
         self.device = comfy.model_management.intermediate_device()
 
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(s) -> dict[str:tuple[str, dict]]:
         return {
             "required": { 
                 "width": ("INT", {"default":1024, "min":16, "max":MAX_RESOLUTION, "step":8}),
@@ -107,7 +184,7 @@ class AspectRatioCalculator:
 class ColorCorrect:
 
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(s) -> dict[str:tuple[str, dict]]:
         return {
             "required" : {
                 "images" : ("IMAGE",),
@@ -172,7 +249,7 @@ class ColorCorrect:
                     yellow_blue : float=0,
                     temperature : float=0,
                     mask : torch.Tensor | None = None
-                ):
+                ) -> tuple[torch.Tensor]:
         
 
         l_images = []
@@ -287,11 +364,11 @@ class ColorCorrect:
 
 
 class ConnectionBus:
-    def __init__(self):
+    def __init__(self) -> None:
         self.default_len = 10
 
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(s) -> dict[str:tuple[str, dict]]:
         return {
             "required" : {},
             "optional" : {
@@ -626,6 +703,11 @@ class GeminiVision:
         tokens = clip.tokenize(response.text)
         output = clip.encode_from_tokens(tokens, return_pooled=True, return_dict=True)
         cond = output.pop("cond")
+
+        db_obj = IamME_Database()
+        db_obj.update_db(input_prompt=prompt, output_prompt=response.text)
+        db_obj.merge_DB()
+
         return (response.text, [[cond, output]],)
 
 
@@ -913,7 +995,7 @@ class ModelManager:
 class OllamaVision:
 
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(s)-> dict:
         return {
             "required" : {
                 "image" : ("IMAGE",),
@@ -952,6 +1034,11 @@ class OllamaVision:
         tokens = clip.tokenize(response)
         output = clip.encode_from_tokens(tokens, return_pooled=True, return_dict=True)
         cond = output.pop("cond")
+
+        db_obj = IamME_Database()
+        db_obj.update_db(input_prompt=prompt, output_prompt=response)
+        db_obj.merge_DB()
+
         print(f"##{PACK_NAME}'s Nodes : Node executed!!")
         return (response, [[cond, output]],)   
 
@@ -1147,33 +1234,33 @@ class SaveImageAdvanced:
 
 NODE_CLASS_MAPPINGS = {
     "AspectEmptyLatentImage" : AspectEmptyLatentImage,
-    "LiveTextEditor": LiveTextEditor,
-    "FacePromptMaker" : FacePromptMaker,
-    "TriggerWordProcessor" : TriggerWordProcessor,
     "BasicTextEditor" : TextTransformer,
-    "GeminiVision": GeminiVision,
-    "ImageBatchLoader":ImageBatchLoader,
-    "GetImageData":GetImageData,
-    "ConnectionBus":ConnectionBus,
-    "SaveImageAdvanced":SaveImageAdvanced,
     "ColorCorrect" : ColorCorrect,
-    "OllamaVision":OllamaVision 
-    # "ModelManager" : ModelManager
+    "ConnectionBus":ConnectionBus,
+    "FacePromptMaker" : FacePromptMaker,
+    "GeminiVision": GeminiVision,
+    "GetImageData":GetImageData,
+    "ImageBatchLoader":ImageBatchLoader,
+    "LiveTextEditor": LiveTextEditor,
+    # "ModelManager" : ModelManager,
+    "OllamaVision":OllamaVision,
+    "TriggerWordProcessor" : TriggerWordProcessor,
+    "SaveImageAdvanced":SaveImageAdvanced,   
 }
 
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "AspectEmptyLatentImage" : PACK_NAME + " AspectEmptyLatent",
-    "LiveTextEditor" : PACK_NAME + " LiveTextEditor",
-    "FacePromptMaker": PACK_NAME + " FacePromptMaker",
-    "TriggerWordProcessor" : PACK_NAME + " TriggerWordProcessor",
     "BasicTextEditor" : PACK_NAME + " BasicTextEditor",
-    "GeminiVision": PACK_NAME + " GeminiVision",
-    "ImageBatchLoader": PACK_NAME + " ImageBatchLoader",
-    "GetImageData": PACK_NAME + " GetImageData",
-    "ConnectionBus": PACK_NAME + " ConnectionBus",
-    "SaveImageAdvanced": PACK_NAME + " SaveImageAdvanced",
     "ColorCorrect": PACK_NAME + " ColorCorrect",
-    "OllamaVision": PACK_NAME + " OllamaVision"
-    # "ModelManager" : PACK_NAME + " ModelManager"
+    "ConnectionBus": PACK_NAME + " ConnectionBus",
+    "FacePromptMaker": PACK_NAME + " FacePromptMaker",
+    "GeminiVision": PACK_NAME + " GeminiVision",
+    "GetImageData": PACK_NAME + " GetImageData",
+    "ImageBatchLoader": PACK_NAME + " ImageBatchLoader",
+    "LiveTextEditor" : PACK_NAME + " LiveTextEditor",
+    # "ModelManager" : PACK_NAME + " ModelManager",
+    "OllamaVision": PACK_NAME + " OllamaVision",
+    "TriggerWordProcessor" : PACK_NAME + " TriggerWordProcessor",   
+    "SaveImageAdvanced": PACK_NAME + " SaveImageAdvanced",
 }
