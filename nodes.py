@@ -49,7 +49,7 @@ class IamME_Database:
                 raise TypeError(f"#{PACK_NAME}'s Nodes : database file is not in correct format")
 
             with open(self.main_db_path, "w") as f:
-                data.append({"datetime":datetime.now().strftime("%B %d, %Y %I:%M %p"), input_prompt:output_prompt})
+                data.append({"datetime":datetime.now().strftime("%B %d, %Y %I:%M %p"), "input_prompt":input_prompt, "output_prompt":output_prompt})
                 f.write(json.dumps(data)) # save to file
             f.close()
 
