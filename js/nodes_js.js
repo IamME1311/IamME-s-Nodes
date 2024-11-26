@@ -289,11 +289,8 @@ app.registerExtension({
                 break;
                 
             case "ModelManager":
-                function downloadModel(modelName, downloadUrl) {
+                function downloadModel(name, url) {
                     try {
-                        // Get the node's ID from the graph
-                        const nodeId = this.id;
-                        console.log("downloadModel called");
                         // Construct the API call to ComfyUI's server
                         return api.fetchApi('/execute', {
                             method: 'POST',
@@ -301,17 +298,17 @@ app.registerExtension({
                                 'Content-Type': 'application/json'
                             },
                             body: JSON.stringify({
-                                node_id: nodeId,
                                 action: "download_model",
-                                model_Name: modelName,
-                                download_Url : downloadUrl
+                                model_Name: name,
+                                download_Url : url
                             })
                         })
                         .then(response => {
                             if (!response.ok) {
                                 throw new Error('Download failed');
                             }
-                            console.log(`Download started for model: ${modelName}`);
+                            console.log(`Download started for model: ${name}`);
+                            console.log(`message from python: ${response.message}`)
                         })
                         .catch(error => {
                             console.error(`Error downloading model try: ${error}`);
@@ -337,11 +334,9 @@ app.registerExtension({
                     }
 
                     if (message && message.names && Array.isArray(message.names)){
-                        console.log("Creating buttons for models:", message.names);
                         message.names.forEach((model)=>{
                             this.addWidget("button", model.name, null, () =>{
-                                console.log(`Button clicked for model: ${model.name}`);
-                                downloadModel.call(model.name, model.download_url);
+                                downloadModel(model.name, model.download_url);
                             });
                         });
                     }

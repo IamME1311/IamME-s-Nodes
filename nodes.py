@@ -1,25 +1,46 @@
+#_________server related imports_________
 import comfy
 from server import PromptServer
-import math
-import random
+from aiohttp import web
+import requests
+
+#_________LLM related imports_________
 import google.generativeai as genai
 from langchain_community.llms.ollama import Ollama
+
+#_________file operations_________
 from PIL import ImageOps
 from pathlib import Path
-import math
+
+
+#_________custom self imports from this folder_________
 from .utils import *
 from .image_utils import *
-import requests
+
+#_________miscellaneous imports_________
 from tqdm import tqdm
 import re
 import logging
 import time
 from datetime import datetime
+import math
+import random
+from colorama import Fore, Style, init
+
+
+# initialize colorama
+init(autoreset=True)
 
 PACK_NAME = "IamME"
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
+# general log/print function for status messages in CMD
+def log_to_console(message:str, level:int=10) -> None:
+    logger.log(level, message)
+    print(Style.BRIGHT + Fore.CYAN + f"[{PACK_NAME}'s Nodes] : {message}")
 
 class IamME_Database:
     def __init__(self) -> None:
@@ -61,11 +82,11 @@ class IamME_Database:
                 raise TypeError(f"#{PACK_NAME}'s Nodes : database file is not in correct format")
 
             with open(self.temp_db_path, "w") as f:
-                data.append({"datetime":datetime.now().strftime("%B %d, %Y %I:%M %p"), input_prompt:output_prompt})
+                data.append({"datetime":datetime.now().strftime("%B %d, %Y %I:%M %p"), "input_prompt":input_prompt, "output_prompt":output_prompt})
                 f.write(json.dumps(data)) # save to file
             f.close()
 
-        print(f"#{PACK_NAME}'s Nodes : {self.type} database updated")
+        log_to_console(f"{self.type} database updated")
 
     def delete_temp_db(db_path:Path) -> None:
         """ Delete temporary database"""
@@ -75,15 +96,15 @@ class IamME_Database:
                     item.unlink(missing_ok=True)
         
             db_path.parent.rmdir()
-            print(f"#{PACK_NAME}'s Nodes : Successfully removed temp database")
+            log_to_console("Successfully removed temp database")
         else:
-            print(f"#{PACK_NAME}'s Nodes : Temp database not found!!")
+            log_to_console("Temp database not found!!")
 
     def merge_DB(self) -> None:
         """Merge temp and main database"""
         temp_db_path = Path(__file__).cwd().joinpath(".temp").joinpath("temp_db.json")
         if temp_db_path.exists() and self.main_folder_path.exists():
-            print(f"#{PACK_NAME}'s Nodes : merging databases")
+            log_to_console("merging databases")
             with open(temp_db_path, "r") as f:
                 temp_data = json.load(f)
             f.close()
@@ -101,11 +122,11 @@ class IamME_Database:
                 f.write(json.dumps(main_data))
             f.close()
             
-            print(f"{PACK_NAME}'s Nodes : Databases merged")
+            log_to_console("Databases merged")
             
             self.delete_temp_db(temp_db_path)
         else:
-            print(f"{PACK_NAME}'s Nodes : No temp DB to merge with, aborting!!")
+            log_to_console("No temp DB to merge with, aborting!!")
             
 #____________NODES_____________
 class AspectEmptyLatentImage:
@@ -129,12 +150,12 @@ class AspectEmptyLatentImage:
     RETURN_TYPES = ("LATENT", "INT", "INT", IMAGE_DATA["type"])
     RETURN_NAMES = ("samples","width","height", IMAGE_DATA["name"])
     OUTPUT_TOOLTIPS = ("The empty latent image batch.",)
-    FUNCTION = "aspect_latent_gen"
+    FUNCTION = "execute"
 
     CATEGORY = PACK_NAME
     DESCRIPTION = "Create a new batch of empty latent images to be denoised via sampling."
 
-    def aspect_latent_gen(self, 
+    def execute(self, 
                           width:int, 
                           height:int, 
                           model_type:str, 
@@ -246,9 +267,9 @@ class ColorCorrect:
     RETURN_TYPES = ("IMAGE",)
     RETURN_NAMES = ("images",)
     CATEGORY = PACK_NAME
-    FUNCTION = "ColorCorrect"
+    FUNCTION = "execute"
 
-    def ColorCorrect(self,
+    def execute(self,
                     images : torch.Tensor,
                     gamma : float=1,
                     contrast : float=1,
@@ -287,7 +308,7 @@ class ColorCorrect:
             raise ValueError("Number of images and masks is not the same, aborting!!")
 
         for  index, image in enumerate(images):
-            print(f"index:{index}, no of images:{len(images)}")
+            log_to_console(f"index:{index}, no of images:{len(images)}")
             mask = l_masks[index]
             # image = l_images[index]
             # preserving original image for later comparisions
@@ -295,7 +316,7 @@ class ColorCorrect:
 
             # apply temperature [takes in tensor][gives out tensor]
             if temperature != 0:
-                print("in temperature") # for debugging
+                log_to_console("in temperature") # for debugging
                 temperature /= -100
                 # result = torch.zeros_like(i)
                 
@@ -317,13 +338,13 @@ class ColorCorrect:
             # apply HSV, [takes in tensor][gives out PIL]
             _h, _s, _v = tensor2pil(image).convert('HSV').split()
             if hue != 0 :
-                print("in hue")
+                log_to_console("in hue")
                 _h = image_hue_offset(_h, hue)
             if saturation != 0 :
-                print("in saturation")
+                log_to_console("in saturation")
                 _s = image_gray_offset(_s, saturation)
             if value != 0 :
-                print("in value")
+                log_to_console("in value")
                 _v = image_gray_offset(_v, value)
             return_image = image_channel_merge((_h, _s, _v), 'HSV')
 
@@ -339,19 +360,19 @@ class ColorCorrect:
 
             #apply gamma [takes in tensor][gives out PIL image]
             if (type(return_image) == Image.Image):
-                print("gamma trigger")
+                log_to_console("gamma trigger")
                 return_image = pil2tensor(return_image)
             return_image = gamma_trans(tensor2pil(return_image), gamma)
 
             #apply contrast [takes and gives out PIL]
             if (contrast != 1):
-                print("in contrast")
+                log_to_console("in contrast")
                 contrast_image = ImageEnhance.Contrast(return_image)
                 return_image = contrast_image.enhance(factor=contrast)
 
             # apply exposure [takes in tensor][gives out PIL]
             if exposure:
-                print("in exposure")
+                log_to_console("in exposure")
                 return_image = pil2tensor(return_image)
                 temp = return_image.detach().clone().cpu().numpy().astype(np.float32)
                 more = temp[:, :, :, :3] > 0
@@ -401,9 +422,9 @@ class ConnectionBus:
     RETURN_TYPES = (BUS_DATA["type"], any_type, any_type, any_type, any_type, any_type, any_type, any_type, any_type, any_type, any_type,)
     RETURN_NAMES = (BUS_DATA["name"], "value_1", "value_2", "value_3", "value_4", "value_5", "value_6", "value_7", "value_8", "value_9", "value_10",)
     CATEGORY = PACK_NAME
-    FUNCTION = "HandleBus"
+    FUNCTION = "execute"
     # value_1, value_2, value_3, value_4, value_5, value_6, value_7, value_8, value_9, value_10
-    def HandleBus(self, 
+    def execute(self, 
                   bus:list=None, 
                   value_1=None, value_2=None, value_3=None, value_4=None, value_5=None, value_6=None, value_7=None, value_8=None, value_9=None, value_10=None, # static inputs
                   **kwargs # for dynamic inputs
@@ -416,11 +437,11 @@ class ConnectionBus:
         if bus is not None:
             org_values = bus
         
-        # print(f"org_values = {org_values}")
+        # log_to_console(f"org_values = {org_values}")
         new_bus = []
         message_to_js = []
 
-        # print(f"IamME's ConnectionBus : No. of arguments passed is, {len(kwargs)}, kwargs are {kwargs}")
+        # log_to_console(f"IamME's ConnectionBus : No. of arguments passed is, {len(kwargs)}, kwargs are {kwargs}")
 
         counter = 10
 
@@ -477,9 +498,9 @@ class FacePromptMaker:
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("Prompt",)
     CATEGORY = PACK_NAME
-    FUNCTION = "PromptMaker"
+    FUNCTION = "execute"
 
-    def PromptMaker(self, seed:int, 
+    def execute(self, seed:int, 
                     Activate:bool, 
                     Gender:str, 
                     Age:str, 
@@ -685,9 +706,9 @@ class GeminiVision:
 
     RETURN_TYPES = ("STRING", "CONDITIONING", )
     CATEGORY = PACK_NAME
-    FUNCTION = 'gen_gemini'
+    FUNCTION = 'execute'
 
-    def gen_gemini(self, 
+    def execute(self, 
                    image:torch.Tensor, 
                    seed:int,
                    clip:object, 
@@ -735,10 +756,10 @@ class GetImageData:
     
     RETURN_TYPES = ("IMAGE", "INT", "INT", "STRING", IMAGE_DATA["type"])
     RETURN_NAMES = ("Image", "Width", "Height", "Aspect Ratio", IMAGE_DATA["name"])
-    FUNCTION = "getData"
+    FUNCTION = "execute"
     CATEGORY = PACK_NAME
 
-    def getData(self, Image:torch.Tensor) -> dict:
+    def execute(self, Image:torch.Tensor) -> dict:
         width = Image.shape[2]
         height = Image.shape[1]
         aspect_ratio_str = f"{int(width / math.gcd(width, height))}:{int(height / math.gcd(width, height))}"
@@ -775,10 +796,10 @@ class ImageBatchLoader:
         }
     RETURN_TYPES = ("IMAGE", "STRING",)
     RETURN_NAMES = ("images","file name")
-    FUNCTION = "ImageLoader"
+    FUNCTION = "execute"
     CATEGORY = PACK_NAME
 
-    def ImageLoader(self, folder_path, images_to_load, mode) -> torch.Tensor:
+    def execute(self, folder_path, images_to_load, mode) -> torch.Tensor:
         if self.folder_path != folder_path:
             self.folder_path = folder_path
             self.cur_index = 0
@@ -846,19 +867,19 @@ class LiveTextEditor:
     
     INPUT_IS_LIST = True
     RETURN_TYPES = ("STRING",)
-    FUNCTION = "TextEditor"
+    FUNCTION = "execute"
     OUTPUT_NODE = True
     CATEGORY = PACK_NAME
 
-    def TextEditor(self, text:str, modify_text:str="", unique_id=None, extra_pnginfo=None) -> dict:
+    def execute(self, text:str, modify_text:str="", unique_id=None, extra_pnginfo=None) -> dict:
         if unique_id is not None and extra_pnginfo is not None:
             if not isinstance(extra_pnginfo, list):
-                print("Error: extra_pnginfo is not a list")
+                log_to_console("Error: extra_pnginfo is not a list")
             elif (
                 not isinstance(extra_pnginfo[0], dict)
                 or "workflow" not in extra_pnginfo[0]
             ):
-                print("Error: extra_pnginfo[0] is not a dict or missing 'workflow' key")
+                log_to_console("Error: extra_pnginfo[0] is not a dict or missing 'workflow' key")
             else:
                 workflow = extra_pnginfo[0]["workflow"]
                 node = next(
@@ -879,8 +900,8 @@ class LiveTextEditor:
 
 class ModelManager:
     def __init__(self):
-        self.civitai_auth_token = "dde477748946d47366ce09db94b81584"
-
+        pass
+        
     @classmethod
     def INPUT_TYPES(s):
         return{
@@ -892,63 +913,67 @@ class ModelManager:
     RETURN_TYPES = ("STRING", "STRING")
     RETURN_NAMES = ("data", "dl_link")
     CATEGORY = PACK_NAME
-    FUNCTION = "model_downloader"
+    FUNCTION = "execute"
     OUTPUT_NODE = True
 
-    @PromptServer.instance.routes.get("/execute")
-    async def handle_event(self, event_type, event_data):
-        if event_type == "download_model":
-            model_name = event_data.get("model_Name")
-            downlad_url = event_data.get("download_Url")
-            try:
-                self.download_model_with_progress(
-                    download_link=downlad_url,
-                    model_name=model_name
-                )
-                return {"status": "success", "message": f"Downloaded model: {model_name}"}
-            except Exception as e:
-                print(f"Error in downloading model: {e}")
-                return {"status": "error", "message": str(e)}
-        return {"status": "error", "message": "Invalid event type"}
+    @PromptServer.instance.routes.post("/execute")
+    async def handle_event(request):
+        log_to_console("inside handle event")
+        data = await request.json()
+        ModelManager.download_model_with_progress(download_link=data["download_Url"], model_name=data["model_Name"])
+        return web.json_response({"message":"successfully executed"}, status=200)
 
-    def download_model_with_progress(self, download_link: str, model_name: str) -> None:
-        print(f"Starting download for {model_name} from {download_link}")
-        headers = {
-            "Authorization": f"Bearer {self.civitai_auth_token}"
-        }
+    def download_model_with_progress(download_link: str, model_name: str) -> None:
+        this_file_path = Path(__file__)
+        checkpoints_path = this_file_path.parent.parent.parent.joinpath("models/checkpoints")
+
+        if not checkpoints_path.exists() and checkpoints_path.is_dir():
+            raise ValueError("Checkpoints folder path not found!!")
         
-        if not model_name.endswith('.safetensors'):
-            model_name = f"{model_name}.safetensors"
+        if model_name in [model.name for model in checkpoints_path.iterdir()]:
+            log_to_console("Model already present in checkpoints folder, aborting download!!")
         
-        try:
-            response = requests.get(
-                download_link,
-                headers=headers,
-                allow_redirects=True,
-                stream=True
-            )
-            response.raise_for_status()
+        else:
+            log_to_console(f"Starting download for {model_name}..")
+            civitai_auth_token = "dde477748946d47366ce09db94b81584"
+            headers = {
+                "Authorization": f"Bearer {civitai_auth_token}"
+            }
             
-            # Get the file size from headers
-            total_size = int(response.headers.get('content-length', 0))
+            if not model_name.endswith('.safetensors'):
+                model_name = f"{model_name}.safetensors"
             
-            # Create progress bar
-            with open(model_name, 'wb') as f, tqdm(
-                desc=model_name,
-                total=total_size,
-                unit='iB',
-                unit_scale=True,
-                unit_divisor=1024,
-            ) as pbar:
-                for chunk in response.iter_content(chunk_size=8192):
-                    size = f.write(chunk)
-                    pbar.update(size)
-                    
-            print(f"Successfully downloaded {model_name}")
-            
-        except requests.exceptions.RequestException as e:
-            print(f"Error downloading file: {e}")
-            raise
+            try:
+                response = requests.get(
+                    download_link,
+                    headers=headers,
+                    allow_redirects=True,
+                    stream=True
+                )
+                response.raise_for_status()
+                
+                # Get the file size from headers
+                total_size = int(response.headers.get('content-length', 0))
+                
+                save_path = checkpoints_path.joinpath(model_name)
+
+                # Create progress bar and save model
+                with open(save_path, 'wb') as f, tqdm(
+                    desc=model_name,
+                    total=total_size,
+                    unit='iB',
+                    unit_scale=True,
+                    unit_divisor=1024,
+                ) as pbar:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        size = f.write(chunk)
+                        pbar.update(size)
+                        
+                log_to_console(f"Successfully downloaded {model_name} and saved to checkpoints directory.")
+                
+            except requests.exceptions.RequestException as e:
+                log_to_console(f"Error downloading file: {e}")
+                raise
 
     def link_processor(self, link:str)->str:
         pattern = r'https://civitai.com/models/(\d+)(?:/|(?:\?modelVersionId=\d+))'
@@ -956,20 +981,12 @@ class ModelManager:
         if match:
             model_id = match.group(1)
         else:
-            logger.log(level=30, msg=f"##{PACK_NAME}'s Nodes : model_id not found in given URL")
+            logger.log(level=30, msg=f"[{PACK_NAME}'s Nodes] : model_id not found in given URL")
             raise
 
         return model_id
 
-    def model_downloader(self, civitAI_model_link:str) -> dict:
-        print(f"model_downloader called with link: {civitAI_model_link}")
-
-        this_file_path = Path(__file__)
-        checkpoints_path = this_file_path.parent.parent.parent.joinpath("models/checkpoints")
-
-        if not checkpoints_path.exists() and checkpoints_path.is_dir():
-            raise ValueError("Checkpoints path not located!!")
-        
+    def execute(self, civitAI_model_link:str) -> dict:
         model_names = []
 
         try:
@@ -994,7 +1011,7 @@ class ModelManager:
                 model_names.append(model_info)    
 
         except Exception as e:
-            print(f"Error in model_downloader: {str(e)}")  # Debug log
+            log_to_console(f"Error in model_downloader: {str(e)}")  # Debug log
             raise
         return {
             "ui" : {
@@ -1023,9 +1040,9 @@ class OllamaVision:
 
     RETURN_TYPES = ("STRING", "CONDITIONING", )
     CATEGORY = PACK_NAME
-    FUNCTION = 'gen_ollama'
+    FUNCTION = 'execute'
 
-    def gen_ollama(self, 
+    def execute(self, 
                     image:torch.Tensor, 
                     seed:int,
                     clip:object, 
@@ -1035,14 +1052,14 @@ class OllamaVision:
                     ) -> tuple[str, list]:
 
         # sys_prompt = ""
-        print(f"##{PACK_NAME}'s Nodes : model name is {opt_model_name}")
+        log_to_console(f"model name is {opt_model_name}")
         image_b64:list = tensor2base64(image)
-        print(f"##{PACK_NAME}'s Nodes : Converted tensor image to base64")
+        log_to_console(f"Converted tensor image to base64")
         start_time = time.time()
         llm = Ollama(model=opt_model_name, base_url="http://192.168.0.169:11434", temperature=randomness).bind(images=image_b64)
         response = llm.invoke(prompt)
         end_time = time.time()
-        print(f"##{PACK_NAME}'s Nodes : generated response, time taken = {end_time-start_time}")
+        log_to_console(f"generated response, time taken = {end_time-start_time}")
         tokens = clip.tokenize(response)
         output = clip.encode_from_tokens(tokens, return_pooled=True, return_dict=True)
         cond = output.pop("cond")
@@ -1051,9 +1068,8 @@ class OllamaVision:
         db_obj.update_db(input_prompt=prompt, output_prompt=response)
         db_obj.merge_DB()
 
-        print(f"##{PACK_NAME}'s Nodes : Node executed!!")
+        log_to_console("Node executed!!")
         return (response, [[cond, output]],)   
-
 
 
 class TextTransformer:
@@ -1075,10 +1091,10 @@ class TextTransformer:
 
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("text",)
-    FUNCTION = 'texttransformer'
+    FUNCTION = 'execute'
     CATEGORY = PACK_NAME
 
-    def texttransformer(self, text:str, replace:bool, prepend:str="", append:str="", to_replace:str="", replace_with:str="") -> str:
+    def execute(self, text:str, replace:bool, prepend:str="", append:str="", to_replace:str="", replace_with:str="") -> str:
         text = prepend + " " + text
         text = text + " " + append
 
@@ -1103,11 +1119,11 @@ class TriggerWordProcessor:
 
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("processed_text",)
-    FUNCTION = 'TextProcessor'
+    FUNCTION = 'execute'
     CATEGORY = PACK_NAME
     # OUTPUT_NODE = True
 
-    def TextProcessor(self, text_in:str, gender:str, seed:int=None) -> tuple:
+    def execute(self, text_in:str, gender:str, seed:int=None) -> tuple:
         options = json_loader("TriggerWords")
         bg_options = options["background"]
         pose_options = options["pose"]
@@ -1126,7 +1142,7 @@ class TriggerWordProcessor:
 
         for word in trigger_words:
             if word not in text_in:
-                print(f"{word} not found in input text, skipping!!")
+                log_to_console(f"{word} not found in input text, skipping!!")
                 continue
             
             #background
@@ -1200,10 +1216,10 @@ class SaveImageAdvanced:
     RETURN_TYPES = (any_type,)
     RETURN_NAMES = ("opt",)
     CATEGORY = PACK_NAME
-    FUNCTION = "save_image"
+    FUNCTION = "execute"
     OUTPUT_NODE =True
 
-    def save_image(self, 
+    def execute(self, 
                    images:torch.Tensor, 
                    parent_folder:str, 
                    subfolder_name:str,
@@ -1248,16 +1264,16 @@ NODE_CLASS_MAPPINGS = {
     "AspectEmptyLatentImage" : AspectEmptyLatentImage,
     "BasicTextEditor" : TextTransformer,
     "ColorCorrect" : ColorCorrect,
-    "ConnectionBus":ConnectionBus,
+    "ConnectionBus": ConnectionBus,
     "FacePromptMaker" : FacePromptMaker,
     "GeminiVision": GeminiVision,
-    "GetImageData":GetImageData,
-    "ImageBatchLoader":ImageBatchLoader,
+    "GetImageData": GetImageData,
+    "ImageBatchLoader": ImageBatchLoader,
     "LiveTextEditor": LiveTextEditor,
-    # "ModelManager" : ModelManager,
-    "OllamaVision":OllamaVision,
+    "ModelManager" : ModelManager,
+    "OllamaVision": OllamaVision,
     "TriggerWordProcessor" : TriggerWordProcessor,
-    "SaveImageAdvanced":SaveImageAdvanced,   
+    "SaveImageAdvanced": SaveImageAdvanced,   
 }
 
 
@@ -1271,7 +1287,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "GetImageData": PACK_NAME + " GetImageData",
     "ImageBatchLoader": PACK_NAME + " ImageBatchLoader",
     "LiveTextEditor" : PACK_NAME + " LiveTextEditor",
-    # "ModelManager" : PACK_NAME + " ModelManager",
+    "ModelManager" : PACK_NAME + " ModelManager",
     "OllamaVision": PACK_NAME + " OllamaVision",
     "TriggerWordProcessor" : PACK_NAME + " TriggerWordProcessor",   
     "SaveImageAdvanced": PACK_NAME + " SaveImageAdvanced",

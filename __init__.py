@@ -1,4 +1,4 @@
-from .nodes import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
+from .nodes import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS, log_to_console
 import os
 import filecmp
 import shutil
@@ -6,12 +6,11 @@ import __main__
 
 
 
+
 WEB_DIRECTORY = './js'
 __all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS', 'WEB_DIRECTORY']
 
-BOLD = '\033[1m'
-CYAN = '\033[36m'
-RESET = '\033[0m'
+
 
 extentions_folder = os.path.join(os.path.dirname(os.path.realpath(__main__.__file__)),
                                  "web" + os.sep + "extensions" + os.sep + "IamMEsNodes")
@@ -19,7 +18,7 @@ javascript_folder = os.path.join(os.path.dirname(os.path.realpath(__file__)), "j
 outdate_file_list = ['nodes_js.js']
 
 if not os.path.exists(extentions_folder):
-    print(f"{BOLD}{CYAN}#[IamMEsNodes]: Making the 'web\extensions\IamMEsNodes' folder{RESET}")
+    log_to_console("Making the 'web\extensions\IamMEsNodes' folder")
     os.mkdir(extentions_folder)
 else:
     for i in outdate_file_list:
@@ -29,12 +28,12 @@ else:
 
 result = filecmp.dircmp(javascript_folder, extentions_folder)
 if result.left_only or result.diff_files:
-    print(f"{BOLD}{CYAN}#[IamMEsNodes]: Update to javascripts files detected{RESET}")
+    log_to_console("Update to javascripts files detected")
     file_list = list(result.left_only)
     file_list.extend(x for x in result.diff_files if x not in file_list)
 
     for file in file_list:
-        print(f"{BOLD}{CYAN}#[IamMEsNodes]: Copying {file} to extensions folder{RESET}")
+        log_to_console(f"Copying {file} to extensions folder")
         src_file = os.path.join(javascript_folder, file)
         dst_file = os.path.join(extentions_folder, file)
         if os.path.exists(dst_file):
