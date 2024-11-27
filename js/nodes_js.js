@@ -2,6 +2,31 @@ import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
 import { ComfyWidgets } from "../../scripts/widgets.js";
 
+function populate(text) {
+                    
+    const v = Array.isArray(text) ? text : [text];
+    if (!v[0]) {
+        v.shift();
+    }
+    for (const list of v) {
+        const w = ComfyWidgets["STRING"](this, "text2", ["STRING", { multiline: true }], app).widget;
+        w.inputEl.readOnly = true;
+        w.inputEl.style.opacity = 0.6;
+        w.value = list;
+    }
+
+    requestAnimationFrame(() => {
+        const sz = this.computeSize();
+        if (sz[0] < this.size[0]) {
+            sz[0] = this.size[0];
+        }
+        if (sz[1] < this.size[1]) {
+            sz[1] = this.size[1];
+        }
+        this.onResize?.(sz);
+        app.graph.setDirtyCanvas(true, false);
+    });
+}
 
 app.registerExtension({
 	name: "IamMEsNodes.nodes_js",
@@ -11,6 +36,8 @@ app.registerExtension({
 		}
 		switch (nodeData.name){
             case "AspectEmptyLatentImage":
+
+                // TODO : this onConnectInput is probably not working, delete this after testing
                 const onAspectLatentImageConnectInput = nodeType.prototype.onConnectInput;
                 nodeType.prototype.onConnectInput = function (targetSlot, type, output, originNode, originSlot) {
                     const v = onAspectLatentImageConnectInput? onAspectLatentImageConnectInput.apply(this, arguments): undefined
@@ -29,118 +56,82 @@ app.registerExtension({
                 break;
 
             case "GetImageData":
-            case "LiveTextEditor":
-                function populate(text) {
-                    const isGetImageData = nodeData.name === "GetImageData";
-                    if (this.widgets) {
-                        if (isGetImageData){
-                            const pos = this.widgets.findIndex((w) => w.name === 'text2');
-                            if (pos !== -1) {
-                                for (let i = pos; i < this.widgets.length; i++) {
-                                    this.widgets[i]?.onRemove?.();
-                                }
-                                this.widgets.length = pos;
-                            }
-                        }
-                        else{
-                            for (let i = 2; i < this.widgets.length; i++) {
-                                this.widgets[i].onRemove?.();
-                            }
-                            this.widgets.length = 2;
-                        }
-                    }
-                    
-                    const v = Array.isArray(text) ? text : [text];
-                    if (!v[0]) {
-                        v.shift();
-                    }
-                    for (const list of v) {
-                        const w = ComfyWidgets["STRING"](this, "text2", ["STRING", { multiline: true }], app).widget;
-                        w.inputEl.readOnly = true;
-                        w.inputEl.style.opacity = 0.6;
-                        w.value = list;
-                    }
-    
-                    requestAnimationFrame(() => {
-                        const sz = this.computeSize();
-                        if (sz[0] < this.size[0]) {
-                            sz[0] = this.size[0];
-                        }
-                        if (sz[1] < this.size[1]) {
-                            sz[1] = this.size[1];
-                        }
-                        this.onResize?.(sz);
-                        app.graph.setDirtyCanvas(true, false);
-                    });
-                }
-    
-                // When the node is executed we will be sent the input text, display this in the widget
-                const onExecuted = nodeType.prototype.onExecuted;
+                const onExec = nodeType.prototype.onExecuted;
                 nodeType.prototype.onExecuted = function (message) {
-                    onExecuted?.apply(this, arguments);
+                    const state = onExec ? onExec.apply(this, arguments):undefined
+
+                    if (this.widgets.length > 0){
+                        for (let i=0; i < this.widgets.length; i++){
+                            if (this.widgets[i].name === "text2"){
+                                this.widgets[i]?.onRemove?.();
+                            }
+                        }
+                        this.widgets.length = 0
+                    }
+
                     if (message.text) {
                         populate.call(this, message.text);
                     }
+                    return state
                 };
-    
-                const onConfigure = nodeType.prototype.onConfigure;
-                nodeType.prototype.onConfigure = function () {
-                    onConfigure?.apply(this, arguments);
-                    if (this.widgets_values?.length) {
-                        const values = this.widgets_values.slice(0, 2);
-                        populate.call(this, values);
-                        this.widgets_values = values;
+                break;
+
+            case "LiveTextEditor":
+                
+                // When the node is executed we will be sent the input text, display this in the widget
+                const onExecuted = nodeType.prototype.onExecuted;
+                nodeType.prototype.onExecuted = function (message) {
+                    const state = onExecuted ? onExecuted.apply(this, arguments):undefined
+
+                    if (this.widgets.length > 3){
+                        for (let i=0; i < this.widgets.length; i++){
+                            if (this.widgets[i].name === "text2"){
+                                this.widgets[i]?.onRemove?.();
+                            }
+                        }
+                        this.widgets.length = 3
                     }
+
+                    if (message.text) {
+                        if (this.widgets[1].name === "modify_text"){
+                            if (this.widgets[1].value !== message.text[0]){
+                                this.widgets[1].value = message.text[0]
+                            }
+                            populate.call(this, message.text);
+                        }
+                    }
+                    return state
                 };
+
+                // this will only trigger when page is reloaded, probably don't need this.
+                // const onConfigure = nodeType.prototype.onConfigure;
+
+                // nodeType.prototype.onConfigure = function (){
+                //     console.log("inside on configure");
+                //     console.log(this.widgets);
+                // };
                 break;
                        
             case "ImageBatchLoader":
-                function populatedata(text) {
-                    if (this.widgets) {
-                        for (let i = 3; i < this.widgets.length; i++) {
-                            this.widgets[i].onRemove?.();
-                        }
-                        this.widgets.length = 3;
-                    }
-                    
-                    const v = [...text];
-                    if (!v[0]) {
-                        v.shift();
-                    }
-                    for (const list of v) {
-                        const w = ComfyWidgets["STRING"](this, "text_new", ["STRING", { multiline: true }], app).widget;
-                        w.inputEl.readOnly = true;
-                        w.inputEl.style.opacity = 0.6;
-                        w.value = list;
-                    }
-    
-                    requestAnimationFrame(() => {
-                        const sz = this.computeSize();
-                        if (sz[0] < this.size[0]) {
-                            sz[0] = this.size[0];
-                        }
-                        if (sz[1] < this.size[1]) {
-                            sz[1] = this.size[1];
-                        }
-                        this.onResize?.(sz);
-                        app.graph.setDirtyCanvas(true, false);
-                    });
-                }
-    
                 // When the node is executed we will be sent the input text, display this in the widget
                 const onExecutedLoader = nodeType.prototype.onExecuted;
                 nodeType.prototype.onExecuted = function (message) {
-                    onExecutedLoader?.apply(this, arguments);
-                    populatedata.call(this, message.text);
-                };
-    
-                const onConfigureLoader = nodeType.prototype.onConfigure;
-                nodeType.prototype.onConfigure = function () {
-                    onConfigureLoader?.apply(this, arguments);
-                    if (this.widgets_values?.length) {
-                        populatedata.call(this, this.widgets_values.slice(+this.widgets_values.length > 1));
+                    const state = onExecutedLoader? onExecutedLoader.apply(this, arguments):undefined
+                    
+                    if (this.widgets.length > 3){
+                        for (let i=0; i < this.widgets.length; i++){
+                            if (this.widgets[i].name === "text2"){
+                                this.widgets[i]?.onRemove?.();
+                            }
+                        }
+                        this.widgets.length = 3
                     }
+
+                    populate.call(this, message.text);
+
+                    return state
                 };
+
                 break;
                 
             case "ColorCorrect":
@@ -320,7 +311,6 @@ app.registerExtension({
                 
                 const onModelManagerExecuted = nodeType.prototype.onExecuted;
                 nodeType.prototype.onExecuted = function (message) {
-                    console.log("ModelManager onExecuted called", message);
                     const state = onModelManagerExecuted ? onModelManagerExecuted.apply(this, arguments):undefined
                     
                     // remove extra buttons

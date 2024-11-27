@@ -1,4 +1,4 @@
-from .nodes import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS, log_to_console
+from .nodes import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS, log_to_console, Path
 import os
 import filecmp
 import shutil
@@ -26,7 +26,7 @@ else:
         if os.path.exists(outdate_file):
             os.remove(outdate_file)
 
-result = filecmp.dircmp(javascript_folder, extentions_folder)
+result = filecmp.dircmp(javascript_folder, extentions_folder, ignore=[file.name for file in Path(javascript_folder).iterdir() if file.name.startswith(".")])
 if result.left_only or result.diff_files:
     log_to_console("Update to javascripts files detected")
     file_list = list(result.left_only)
@@ -39,3 +39,5 @@ if result.left_only or result.diff_files:
         if os.path.exists(dst_file):
             os.remove(dst_file)
         shutil.copy(src_file, dst_file)
+else:
+    log_to_console("No update to javascript files found")

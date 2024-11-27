@@ -1,11 +1,12 @@
 import json
 import os
 import numpy as np
+from colorama import Fore, Style, init
+import logging
 
 
 
-
-
+PACK_NAME = "IamME"
 MAX_RESOLUTION = 16384
 ASPECT_CHOICES = ["None","custom",
                     "1:1 (Perfect Square)",
@@ -15,11 +16,15 @@ ASPECT_CHOICES = ["None","custom",
                     "9:7 (Artful Horizon)", "16:9 (Panorama)", "19:9 (Cinematic Ultrawide)", "21:9 (Epic Ultrawide)", "32:9 (Extreme Ultrawide)"
                 ]
 
-DEFAULT_SYS_PROMPT = ""
-
 IMAGE_DATA = {"type":"image_data", "name":"image data"}
 
 BUS_DATA = {"type":"bus", "name":"bus"}
+
+# initialize colorama
+init(autoreset=True)
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def json_loader(file_name:str) -> dict:
@@ -36,6 +41,12 @@ def apply_attention(text:str, weight:float) -> str:
 def parser(aspect : str) -> int:
     aspect = list(map(int,aspect.split()[0].split(":")))
     return aspect
+
+# general log/print function for status messages in CMD
+def log_to_console(message:str, level:int=10) -> None:
+    logger.log(level, message)
+    print(Style.BRIGHT + Fore.CYAN + f"[{PACK_NAME}'s Nodes] : {message}")
+
 
 random_opt = "Randomize 🎲"
 option_dict = json_loader("FacePromptMaker")

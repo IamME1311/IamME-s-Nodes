@@ -20,27 +20,10 @@ from .image_utils import *
 #_________miscellaneous imports_________
 from tqdm import tqdm
 import re
-import logging
 import time
 from datetime import datetime
 import math
 import random
-from colorama import Fore, Style, init
-
-
-# initialize colorama
-init(autoreset=True)
-
-PACK_NAME = "IamME"
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-
-# general log/print function for status messages in CMD
-def log_to_console(message:str, level:int=10) -> None:
-    logger.log(level, message)
-    print(Style.BRIGHT + Fore.CYAN + f"[{PACK_NAME}'s Nodes] : {message}")
 
 class IamME_Database:
     def __init__(self) -> None:
@@ -62,6 +45,7 @@ class IamME_Database:
 
     def update_db(self, input_prompt:str, output_prompt:str) -> None:
         """ Update the current database with input_prompt and output_prompt"""
+        input_prompt = input_prompt.replace("\"", "")
         if self.type == "main":
             with open(self.main_db_path, "r") as f:
                 data:list = json.load(f)
@@ -156,15 +140,15 @@ class AspectEmptyLatentImage:
     DESCRIPTION = "Create a new batch of empty latent images to be denoised via sampling."
 
     def execute(self, 
-                          width:int, 
-                          height:int, 
-                          model_type:str, 
-                          aspect_ratio:int, 
-                          aspect_width_override:int, 
-                          aspect_height_override:int, 
-                          width_override:int, 
-                          batch_size:int=1
-                          ) -> dict:
+                    width:int, 
+                    height:int, 
+                    model_type:str, 
+                    aspect_ratio:int, 
+                    aspect_width_override:int, 
+                    aspect_height_override:int, 
+                    width_override:int, 
+                    batch_size:int=1
+                    ) -> dict:
         if aspect_ratio!="None":
             if aspect_ratio in ASPECT_CHOICES[2:]:
                 aspect_width_override, aspect_height_override = parser(aspect_ratio)
@@ -361,8 +345,9 @@ class ColorCorrect:
             #apply gamma [takes in tensor][gives out PIL image]
             if (type(return_image) == Image.Image):
                 log_to_console("gamma trigger")
-                return_image = pil2tensor(return_image)
-            return_image = gamma_trans(tensor2pil(return_image), gamma)
+                return_image = gamma_trans(return_image, gamma)
+            else:
+                return_image = gamma_trans(tensor2pil(return_image), gamma)
 
             #apply contrast [takes and gives out PIL]
             if (contrast != 1):
@@ -390,8 +375,6 @@ class ColorCorrect:
                 return_image = RGB2RGBA(return_image, original_image.split()[-1])
 
             return_images.append(pil2tensor(return_image))
-
-
 
         return (torch.cat(return_images, dim=0),)
 
@@ -699,7 +682,6 @@ class GeminiVision:
                 "clip" : ("CLIP",),
                 "randomness" : ("FLOAT", {"default":0.7, "min":0, "max": 1, "step":0.1, "display":"slider"}),
                 "api_key" : ("STRING", {"default":""}),
-                # "output_tokens" : ("INT", {"min":0, "max":500, "step":1}),
                 "prompt" : ("STRING", {"default":"Describe the image", "multiline":True})
             }
         }
@@ -715,19 +697,11 @@ class GeminiVision:
                    randomness:float, 
                    prompt:str, 
                    api_key:str,
-                #    output_tokens:int=None
                    ) -> tuple[str, list]:
         
-        # cwd = Path(__file__).parent
-
-        # with open(f"{cwd}\config.yaml", "r") as f:
-        #     config = yaml.safe_load(f)
         pil_image = tensor2pil(image)
 
-        # sys_prompt = ""
-
         try:
-        # genai.configure(api_key=config["GEMINI_API_KEY"])
             genai.configure(api_key=api_key)
         except Exception as e:
             raise (f"Error configuring gemini model : {e}")
