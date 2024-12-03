@@ -2,7 +2,6 @@
 import comfy
 from server import PromptServer
 from aiohttp import web
-import requests
 
 #_________LLM related imports_________
 import google.generativeai as genai
@@ -10,7 +9,6 @@ from langchain_community.llms.ollama import Ollama
 
 #_________file operations_________
 from PIL import ImageOps
-from pathlib import Path
 
 
 #_________custom self imports from this folder_________
@@ -1030,7 +1028,9 @@ class OllamaVision:
         image_b64:list = tensor2base64(image)
         log_to_console(f"Converted tensor image to base64")
         start_time = time.time()
-        llm = Ollama(model=opt_model_name, base_url="http://192.168.0.169:11434", temperature=randomness).bind(images=image_b64)
+        config_data = config_loader()
+        ip_address = config_data["ip_address"]
+        llm = Ollama(model=opt_model_name, base_url=f'http://{ip_address}:11434', temperature=randomness).bind(images=image_b64)
         response = llm.invoke(prompt)
         end_time = time.time()
         log_to_console(f"generated response, time taken = {end_time-start_time}")

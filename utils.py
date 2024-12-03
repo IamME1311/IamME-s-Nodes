@@ -1,5 +1,6 @@
 import json
-import os
+from pathlib import Path
+import requests
 import numpy as np
 from colorama import Fore, Style, init
 import logging
@@ -28,8 +29,8 @@ logger = logging.getLogger(__name__)
 
 
 def json_loader(file_name:str) -> dict:
-    cwd_name = os.path.dirname(__file__)
-    path_to_asset_file = os.path.join(cwd_name, f"assets/{file_name}.json")
+    cwd_name = Path(__file__).parent
+    path_to_asset_file = cwd_name.joinpath(f"assets/{file_name}.json")
     with open(path_to_asset_file, "r") as f:
         asset_data = json.load(f)
     return asset_data
@@ -51,7 +52,14 @@ def log_to_console(message:str, level:int=10) -> None:
 random_opt = "Randomize 🎲"
 option_dict = json_loader("FacePromptMaker")
 
+def config_loader() -> dict:
+    # Raw URL of the file on GitHub (private repo)
+    url = "https://raw.githubusercontent.com/IamME1311/Assets/master/config.json"
 
+    response = requests.get(url)
+
+    if response.status_code == 200:
+        return response.json()
 
 
 
