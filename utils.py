@@ -54,7 +54,7 @@ option_dict = json_loader("FacePromptMaker")
 
 def config_loader() -> dict:
     # Raw URL of the file on GitHub (private repo)
-    url = "https://raw.githubusercontent.com/IamME1311/Assets/master/config.json"
+    url = "https://raw.githubusercontent.com/IamME1311/IamME-s-Nodes/master/assets/config.json"
 
     response = requests.get(url)
 
