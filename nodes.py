@@ -1028,8 +1028,8 @@ class OllamaVision:
         image_b64:list = tensor2base64(image)
         log_to_console(f"Converted tensor image to base64")
         start_time = time.time()
-        config_data = config_loader()
-        ip_address = config_data["ip_address"]
+        client, config_data = config_loader()
+        ip_address = config_data.distinct("ip_address")[0]
         llm = Ollama(model=opt_model_name, base_url=f'http://{ip_address}:11434', temperature=randomness).bind(images=image_b64)
         response = llm.invoke(prompt)
         end_time = time.time()
@@ -1037,7 +1037,8 @@ class OllamaVision:
         tokens = clip.tokenize(response)
         output = clip.encode_from_tokens(tokens, return_pooled=True, return_dict=True)
         cond = output.pop("cond")
-
+        client.close()
+        
         db_obj = IamME_Database()
         db_obj.update_db(input_prompt=prompt, output_prompt=response)
         db_obj.merge_DB()

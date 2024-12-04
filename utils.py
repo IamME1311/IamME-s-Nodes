@@ -1,9 +1,12 @@
 import json
 from pathlib import Path
+import pymongo.collection
 import requests
 import numpy as np
 from colorama import Fore, Style, init
 import logging
+import pymongo
+import os
 
 
 
@@ -52,15 +55,24 @@ def log_to_console(message:str, level:int=10) -> None:
 random_opt = "Randomize 🎲"
 option_dict = json_loader("FacePromptMaker")
 
-def config_loader() -> dict:
-    # Raw URL of the file on GitHub (private repo)
-    url = "https://raw.githubusercontent.com/IamME1311/IamME-s-Nodes/master/assets/config.json"
+def config_loader() -> tuple[pymongo.MongoClient, pymongo.collection.Collection]:
 
-    response = requests.get(url)
+    mongo_uri = os.environ["MONGO_URI"]
+    mongo_pass = os.environ["MONGO_PASS"]
 
-    if response.status_code == 200:
-        return response.json()
+    mongo_uri = mongo_uri.replace("MONGO_PASS", mongo_pass)
 
+    mongo_client = pymongo.MongoClient(mongo_uri)
+
+    try:
+        mongo_client.admin.command("ping")
+    
+    except Exception as e:
+        log_to_console(f"Can't connect to MongoDB : {e}")
+
+    collection = mongo_client["MY_DB"]["data"]
+
+    return (mongo_client, collection)
 
 
 # thanks to pythongossss..
