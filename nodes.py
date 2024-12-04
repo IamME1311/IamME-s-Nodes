@@ -709,9 +709,9 @@ class GeminiVision:
         output = clip.encode_from_tokens(tokens, return_pooled=True, return_dict=True)
         cond = output.pop("cond")
 
-        db_obj = IamME_Database()
-        db_obj.update_db(input_prompt=prompt, output_prompt=response.text)
-        db_obj.merge_DB()
+        # db_obj = IamME_Database()
+        # db_obj.update_db(input_prompt=prompt, output_prompt=response.text)
+        # db_obj.merge_DB()
 
         return (response.text, [[cond, output]],)
 
@@ -1039,9 +1039,9 @@ class OllamaVision:
         cond = output.pop("cond")
         client.close()
         
-        db_obj = IamME_Database()
-        db_obj.update_db(input_prompt=prompt, output_prompt=response)
-        db_obj.merge_DB()
+        # db_obj = IamME_Database()
+        # db_obj.update_db(input_prompt=prompt, output_prompt=response)
+        # db_obj.merge_DB()
 
         log_to_console("Node executed!!")
         return (response, [[cond, output]],)   
