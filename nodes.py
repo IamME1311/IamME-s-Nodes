@@ -1003,6 +1003,7 @@ class OllamaVision:
                 "seed" : ("INT", {"forceInput":True}),
                 "clip" : ("CLIP",),
                 "randomness" : ("FLOAT", {"default":0.7, "min":0, "max": 1, "step":0.1, "display":"slider"}),
+                "host" : (["Sarthak PC", "Sridhar PC"],),
                 "prompt" : ("STRING", {"default":"Describe the image", "multiline":True})
             }, 
             "optional" : {
@@ -1010,7 +1011,8 @@ class OllamaVision:
             }
         }
 
-    RETURN_TYPES = ("STRING", "CONDITIONING", )
+    # RETURN_TYPES = ("STRING", "CONDITIONING", )
+    RETURN_TYPES = ("STRING",)
     CATEGORY = PACK_NAME
     FUNCTION = 'execute'
 
@@ -1020,6 +1022,7 @@ class OllamaVision:
                     clip:object, 
                     prompt:str,
                     randomness:float,
+                    host:str,
                     opt_model_name:str = "llama3.2-vision:latest"
                     ) -> tuple[str, list]:
 
@@ -1029,11 +1032,12 @@ class OllamaVision:
         log_to_console(f"Converted tensor image to base64")
         start_time = time.time()
         client, config_data = config_loader()
-        ip_address = config_data.distinct("ip_address")[0]
+        host_name = host.split()[0].lower()
+        ip_address = config_data.distinct(host_name)[0]
         llm = Ollama(model=opt_model_name, base_url=f'http://{ip_address}:11434', temperature=randomness).bind(images=image_b64)
         response = llm.invoke(prompt)
         end_time = time.time()
-        log_to_console(f"generated response, time taken = {end_time-start_time}")
+        log_to_console(f"generated response, time taken = {end_time-start_time:.2f} seconds")
         tokens = clip.tokenize(response)
         output = clip.encode_from_tokens(tokens, return_pooled=True, return_dict=True)
         cond = output.pop("cond")
