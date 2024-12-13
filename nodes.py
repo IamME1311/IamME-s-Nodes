@@ -4,8 +4,8 @@ from server import PromptServer
 from aiohttp import web
 
 #_________LLM related imports_________
-import google.generativeai as genai
-from langchain_community.llms.ollama import Ollama
+from langchain_ollama import ChatOllama
+from langchain_core.output_parsers import StrOutputParser
 
 #_________file operations_________
 from PIL import ImageOps
@@ -1011,8 +1011,7 @@ class OllamaVision:
             }
         }
 
-    # RETURN_TYPES = ("STRING", "CONDITIONING", )
-    RETURN_TYPES = ("STRING",)
+    RETURN_TYPES = ("STRING", "CONDITIONING", )
     CATEGORY = PACK_NAME
     FUNCTION = 'execute'
 
@@ -1028,16 +1027,24 @@ class OllamaVision:
 
         # sys_prompt = ""
         log_to_console(f"model name is {opt_model_name}")
-        image_b64:list = tensor2base64(image)
+        if image.shape[0] > 1:
+            log_to_console("OllamaVision will only generate text for 1st image in the batch, ignoring others...")
+            image = image[0]
+        image_b64:bytes = tensor2base64(image)
         log_to_console(f"Converted tensor image to base64")
+
         start_time = time.time()
         client, config_data = config_loader()
         host_name = host.split()[0].lower()
         ip_address = config_data.distinct(host_name)[0]
-        llm = Ollama(model=opt_model_name, base_url=f'http://{ip_address}:11434', temperature=randomness).bind(images=image_b64)
-        response = llm.invoke(prompt)
+
+        llm = ChatOllama(model=opt_model_name, base_url=f'http://{ip_address}:11434', temperature=randomness)
+        chain = prompt_func | llm | StrOutputParser()
+        response = chain.invoke({"text": prompt, "image": image_b64})
         end_time = time.time()
+
         log_to_console(f"generated response, time taken = {end_time-start_time:.2f} seconds")
+
         tokens = clip.tokenize(response)
         output = clip.encode_from_tokens(tokens, return_pooled=True, return_dict=True)
         cond = output.pop("cond")

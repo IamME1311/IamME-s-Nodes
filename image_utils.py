@@ -172,12 +172,9 @@ def chop_image_v2(background_image:Image, layer_image:Image, blend_mode:str, opa
 
 
 ############################################################################
-def tensor2base64(images:torch.Tensor) -> list:
-    images_b64 = []
-    for image in images:
-        img = tensor2pil(image)
-        buffered = io.BytesIO()
-        img.save(buffered, format="PNG")
-        img_bytes = base64.b64encode(buffered.getvalue()).decode("utf-8")
-        images_b64.append(img_bytes)
-    return images_b64
+def tensor2base64(image:torch.Tensor) -> bytes:
+    img = tensor2pil(image)
+    buffered = io.BytesIO()
+    img.save(buffered, format="PNG")
+    img_bytes = base64.b64encode(buffered.getvalue()).decode("utf-8")
+    return img_bytes

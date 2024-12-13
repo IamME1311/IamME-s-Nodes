@@ -7,6 +7,7 @@ from colorama import Fore, Style, init
 import logging
 import pymongo
 import os
+from langchain_core.messages import HumanMessage
 
 
 
@@ -74,6 +75,23 @@ def config_loader() -> tuple[pymongo.MongoClient, pymongo.collection.Collection]
 
     return (mongo_client, collection)
 
+def prompt_func(data):
+    text = data["text"]
+    image = data["image"]
+
+    image_part = {
+        "type": "image_url",
+        "image_url": f"data:image/jpeg;base64,{image}",
+    }
+
+    content_parts = []
+
+    text_part = {"type": "text", "text": text}
+
+    content_parts.append(image_part)
+    content_parts.append(text_part)
+
+    return [HumanMessage(content=content_parts)]
 
 # thanks to pythongossss..
 class AnyType(str):

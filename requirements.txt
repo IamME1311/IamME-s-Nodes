@@ -2,6 +2,6 @@ torch
 numpy
 google-generativeai
 pyyaml
-torchaudio
-langchain-community
+langchain-ollama
+langchain-core
 pymongo
