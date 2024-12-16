@@ -1,3 +1,10 @@
+#_________miscellaneous imports_________
+import re
+import time
+from datetime import datetime
+import math
+import random
+
 #_________server related imports_________
 import comfy
 from server import PromptServer
@@ -6,6 +13,7 @@ from aiohttp import web
 #_________LLM related imports_________
 from langchain_ollama import ChatOllama
 from langchain_core.output_parsers import StrOutputParser
+import google.generativeai as genai
 
 #_________file operations_________
 from PIL import ImageOps
@@ -15,13 +23,7 @@ from PIL import ImageOps
 from .utils import *
 from .image_utils import *
 
-#_________miscellaneous imports_________
-from tqdm import tqdm
-import re
-import time
-from datetime import datetime
-import math
-import random
+
 
 class IamME_Database:
     def __init__(self) -> None:
@@ -76,7 +78,7 @@ class IamME_Database:
             for item in db_path.parent.iterdir():
                 if item.is_file():
                     item.unlink(missing_ok=True)
-        
+
             db_path.parent.rmdir()
             log_to_console("Successfully removed temp database")
         else:
@@ -90,26 +92,26 @@ class IamME_Database:
             with open(temp_db_path, "r") as f:
                 temp_data = json.load(f)
             f.close()
-            
+
             with open(self.main_db_path, "r") as m:
                 main_data = json.load(m)
             m.close()
-            
+
             if main_data.__class__.__name__ != "list" or temp_data.__class__.__name__ !="list":
                 raise TypeError(f"#{PACK_NAME}'s Nodes : both database datatypes mismatch!!")
-            
+
             main_data = main_data + temp_data
 
             with open(self.main_db_path, "w") as f:
                 f.write(json.dumps(main_data))
             f.close()
-            
+
             log_to_console("Databases merged")
-            
+
             self.delete_temp_db(temp_db_path)
         else:
             log_to_console("No temp DB to merge with, aborting!!")
-            
+
 #____________NODES_____________
 class AspectEmptyLatentImage:
     def __init__(self) -> None:
@@ -137,14 +139,14 @@ class AspectEmptyLatentImage:
     CATEGORY = PACK_NAME
     DESCRIPTION = "Create a new batch of empty latent images to be denoised via sampling."
 
-    def execute(self, 
-                    width:int, 
-                    height:int, 
-                    model_type:str, 
-                    aspect_ratio:int, 
-                    aspect_width_override:int, 
-                    aspect_height_override:int, 
-                    width_override:int, 
+    def execute(self,
+                    width:int,
+                    height:int,
+                    model_type:str,
+                    aspect_ratio:int,
+                    aspect_width_override:int,
+                    aspect_height_override:int,
+                    width_override:int,
                     batch_size:int=1
                     ) -> dict:
         if aspect_ratio!="None":
@@ -170,12 +172,12 @@ class AspectEmptyLatentImage:
         else: # normal empty latent
             width = int(width - (width%8))
             height = int(height - (height%8))
-    
+
         latent = torch.zeros([batch_size, 4, height // 8, width // 8], device=self.device)
         image_data = {"width":width, "height":height}
         return {"ui":{
                     "text": [f"{height}x{width}"]
-                }, 
+                },
                 "result":
                     ({"samples":latent}, width, height, image_data)
             }
@@ -245,7 +247,7 @@ class ColorCorrect:
                 "mask": ("MASK",)
             },
         }
-    
+
     RETURN_TYPES = ("IMAGE",)
     RETURN_NAMES = ("images",)
     CATEGORY = PACK_NAME
@@ -265,7 +267,7 @@ class ColorCorrect:
                     temperature : float=0,
                     mask : torch.Tensor | None = None
                 ) -> tuple[torch.Tensor]:
-        
+
 
         l_images = []
         l_masks = []
@@ -301,7 +303,7 @@ class ColorCorrect:
                 log_to_console("in temperature") # for debugging
                 temperature /= -100
                 # result = torch.zeros_like(i)
-                
+
                 tensor_image = image.numpy()
                 modified_image = Image.fromarray((tensor_image * 255).astype(np.uint8))
                 modified_image = np.array(modified_image).astype(np.float32)
@@ -316,7 +318,7 @@ class ColorCorrect:
                 modified_image = modified_image.astype(np.uint8)
                 modified_image = modified_image / 255
                 image = torch.from_numpy(modified_image).unsqueeze(0)
-            
+
             # apply HSV, [takes in tensor][gives out PIL]
             _h, _s, _v = tensor2pil(image).convert('HSV').split()
             if hue != 0 :
@@ -341,14 +343,14 @@ class ColorCorrect:
                             preserve_luminosity=True)
 
             #apply gamma [takes in tensor][gives out PIL image]
-            if (type(return_image) == Image.Image):
+            if type(return_image) == Image.Image:
                 log_to_console("gamma trigger")
                 return_image = gamma_trans(return_image, gamma)
             else:
                 return_image = gamma_trans(tensor2pil(return_image), gamma)
 
             #apply contrast [takes and gives out PIL]
-            if (contrast != 1):
+            if contrast != 1:
                 log_to_console("in contrast")
                 contrast_image = ImageEnhance.Contrast(return_image)
                 return_image = contrast_image.enhance(factor=contrast)
@@ -365,7 +367,7 @@ class ColorCorrect:
                     scale = 1 / (1 - bp)
                     temp = np.clip((temp - bp) * scale, 0.0, 1.0)
                 return_image = tensor2pil(torch.from_numpy(temp))
-            
+
 
             return_image = chop_image_v2(original_image, return_image, blend_mode="normal", opacity=100)
             return_image.paste(original_image, mask=ImageChops.invert(mask))
@@ -431,8 +433,6 @@ class ConnectionBus:
 
         for  i in range(counter):
             exec(f"new_bus.append(value_{i+1} if value_{i+1} is not None else org_values[i])")
-                
-        
 
         return {"ui" : {"message":message_to_js}, "result":(new_bus, *new_bus)}
 
@@ -482,16 +482,16 @@ class FacePromptMaker:
     FUNCTION = "execute"
 
     def execute(self, seed:int, 
-                    Activate:bool, 
-                    Gender:str, 
-                    Age:str, 
-                    nationality_to_mix:str, 
-                    body_type:str, 
-                    body_type_weight:float, 
+                    Activate:bool,
+                    Gender:str,
+                    Age:str,
+                    nationality_to_mix:str,
+                    body_type:str,
+                    body_type_weight:float,
                     Skin_Tone:str,
                     Face_Shape:str,
-                    Forehead:str, 
-                    Hair_Color:str, 
+                    Forehead:str,
+                    Hair_Color:str,
                     Hair_Style:str,
                     Hair_Length:str,
                     General_weight:float,
@@ -505,19 +505,19 @@ class FacePromptMaker:
                     Cheekbones:str,
                     Chin_Shape:str,
                     beard:str,
-                    beard_color:str, 
+                    beard_color:str,
                     opt_append_this:str=""
             ) -> tuple:
 
 
-        if Activate==True:
+        if Activate is True:
             prompt_list_final = []
             prompt_list = []
 
             #gender, age and body type
             if Gender==random_opt:
                 Gender=random.choice(option_dict["gender"])
-            
+
             if Age==random_opt:
                 Age=random.choice([str(age) for age in range(20, 31)])
             Age = Age +"-year old "
@@ -533,14 +533,12 @@ class FacePromptMaker:
                 body_type = Age + Gender + ", " + body_type
                 prompt_list_final.append(apply_attention(body_type, body_type_weight))
 
-            if nationality_to_mix==random_opt:                
+            if nationality_to_mix==random_opt:
                 nationality_to_mix=random.choice(option_dict["nationality_to_mix"])
             elif nationality_to_mix=="None":
                 nationality_to_mix=""
             nationality = f"[Indian:{nationality_to_mix}]"
             prompt_list.append(nationality)
-
-            
 
             if Skin_Tone!="None":
                 if Skin_Tone==random_opt:
@@ -577,9 +575,9 @@ class FacePromptMaker:
                     Hair_Length = random.choice(option_dict["Hair_Length"])
 
             if Hair_Length!="None" and Hair_Style!="None" and Hair_Color!="None":
-                hair = f"{Hair_Color} {Hair_Length} {Hair_Style} hair"  
+                hair = f"{Hair_Color} {Hair_Length} {Hair_Style} hair"
                 prompt_list.append(hair)
-            
+
             #eyes
             if Eye_Color!="None":
                 if Eye_Color==random_opt:
@@ -594,7 +592,7 @@ class FacePromptMaker:
                     Eyebrows = random.choice(option_dict["Eyebrows"])
 
             if Eye_Color!="None" and Eye_Shape!="None" and Eyebrows!="None":
-                eyes = f"{Eye_Color} {Eye_Shape} eyes with {Eyebrows} eyebrows"  
+                eyes = f"{Eye_Color} {Eye_Shape} eyes with {Eyebrows} eyebrows"
                 prompt_list.append(eyes)
 
 
@@ -607,17 +605,17 @@ class FacePromptMaker:
                     Lip_Color = random.choice(option_dict["Lip_Color"])
 
             if Nose_Shape!="None" and Lip_Color!="None":
-                nose_lip = f"{Nose_Shape} nose with {Lip_Color} colored lips"  
+                nose_lip = f"{Nose_Shape} nose with {Lip_Color} colored lips"
                 prompt_list.append(nose_lip)
 
-            
+
             if Expression!="None":
                 if Expression==random_opt:
                     Expression = random.choice(option_dict["Expression"])
                     Expression = f"{Expression} expression"
 
                 prompt_list.append(apply_attention(Expression, General_weight))
-            
+
             #jaw structure
             if Cheekbones!="None":
                 if Cheekbones==random_opt:
@@ -628,7 +626,7 @@ class FacePromptMaker:
                     Chin_Shape = random.choice(option_dict["Chin_Shape"])
 
             if Chin_Shape!="None" and Cheekbones!="None":
-                jaw = f"{Chin_Shape} chin with {Cheekbones} cheekbones"  
+                jaw = f"{Chin_Shape} chin with {Cheekbones} cheekbones"
                 prompt_list.append(jaw)
 
             #facial hair
@@ -646,7 +644,7 @@ class FacePromptMaker:
                         beard_color = random.choice(option_dict["beard_color"])
 
                 if Facial_Hair!="None" and beard!="None" and beard_color!="None":
-                    facial_hair = f"{Facial_Hair} facial hair, {beard_color} {beard} beard"  
+                    facial_hair = f"{Facial_Hair} facial hair, {beard_color} {beard} beard"
                     prompt_list.append(facial_hair)
 
             if len(prompt_list_final) > 0:
@@ -657,7 +655,7 @@ class FacePromptMaker:
                 if not opt_append_this:
                     prompt = prompt.lower()
                     return (prompt, )
-                
+
                 elif "__faceprompt__" not in opt_append_this:
                     raise ValueError("trigger word __faceprompt__ not found!!")
                 else:
@@ -688,21 +686,21 @@ class GeminiVision:
     CATEGORY = PACK_NAME
     FUNCTION = 'execute'
 
-    def execute(self, 
-                   image:torch.Tensor, 
+    def execute(self,
+                   image:torch.Tensor,
                    seed:int,
-                   clip:object, 
-                   randomness:float, 
-                   prompt:str, 
+                   clip:object,
+                   randomness:float,
+                   prompt:str,
                    api_key:str,
                    ) -> tuple[str, list]:
-        
+
         pil_image = tensor2pil(image)
 
         try:
             genai.configure(api_key=api_key)
         except Exception as e:
-            raise (f"Error configuring gemini model : {e}")
+            raise f"Error configuring gemini model : {e}"
         llm = genai.GenerativeModel(model_name="gemini-1.5-flash", generation_config=genai.GenerationConfig(temperature=randomness))
         response = llm.generate_content([pil_image, prompt])
         tokens = clip.tokenize(response.text)
@@ -725,7 +723,7 @@ class GetImageData:
                 "Image" : ("IMAGE",),
             }
         }
-    
+
     RETURN_TYPES = ("IMAGE", "INT", "INT", "STRING", IMAGE_DATA["type"])
     RETURN_NAMES = ("Image", "Width", "Height", "Aspect Ratio", IMAGE_DATA["name"])
     FUNCTION = "execute"
@@ -779,12 +777,12 @@ class ImageBatchLoader:
         # check path validity
         if not folder_path.exists() or not folder_path.is_dir():
             raise ValueError(f"Path error : {folder_path} is either non-existent or isn't a directory!!")
-        
+
         image_paths = []
         for path in folder_path.iterdir():
             if path.suffix.lower() in [".png", ".jpg", ".jpeg"]:
                 image_paths.append(path)
-        
+
         display_text = []
         display_text.append(f"There are {len(image_paths)} images in this directory.")
         images = []
@@ -812,18 +810,17 @@ class ImageBatchLoader:
             self.cur_index += 1
             if self.cur_index >= len(image_paths):
                 self.cur_index = 0
-                
 
         return {"ui": {"text":display_text},"result":(torch.cat(images, dim=0), file_name,)}
-    
+
     @classmethod
     def IS_CHANGED(s, **kwargs):
         if kwargs["mode"] == "incremental":
             return float("NaN")
-        
+
 
 class LiveTextEditor:
-    
+
     @classmethod
     def INPUT_TYPES(s):
         return {
@@ -836,7 +833,7 @@ class LiveTextEditor:
                 "extra_pnginfo": "EXTRA_PNGINFO",
             },
         }
-    
+
     INPUT_IS_LIST = True
     RETURN_TYPES = ("STRING",)
     FUNCTION = "execute"
@@ -873,7 +870,7 @@ class LiveTextEditor:
 class ModelManager:
     def __init__(self):
         pass
-        
+
     @classmethod
     def INPUT_TYPES(s):
         return{
@@ -881,106 +878,59 @@ class ModelManager:
                 "civitAI_model_link" : ("STRING", {"default":"", "multiline":True})
             }
         }
-    
+
     RETURN_TYPES = ("STRING", "STRING")
     RETURN_NAMES = ("data", "dl_link")
     CATEGORY = PACK_NAME
     FUNCTION = "execute"
     OUTPUT_NODE = True
 
+    @staticmethod
     @PromptServer.instance.routes.post("/execute")
     async def handle_event(request):
         log_to_console("inside handle event")
         data = await request.json()
-        ModelManager.download_model_with_progress(download_link=data["download_Url"], model_name=data["model_Name"])
+        download_model_with_progress(download_link=data["download_Url"], model_name=data["model_Name"])
         return web.json_response({"message":"successfully executed"}, status=200)
 
-    def download_model_with_progress(download_link: str, model_name: str) -> None:
-        this_file_path = Path(__file__)
-        checkpoints_path = this_file_path.parent.parent.parent.joinpath("models/checkpoints")
 
-        if not checkpoints_path.exists() and checkpoints_path.is_dir():
-            raise ValueError("Checkpoints folder path not found!!")
-        
-        if model_name in [model.name for model in checkpoints_path.iterdir()]:
-            log_to_console("Model already present in checkpoints folder, aborting download!!")
-        
-        else:
-            log_to_console(f"Starting download for {model_name}..")
-            civitai_auth_token = "dde477748946d47366ce09db94b81584"
-            headers = {
-                "Authorization": f"Bearer {civitai_auth_token}"
-            }
-            
-            if not model_name.endswith('.safetensors'):
-                model_name = f"{model_name}.safetensors"
-            
-            try:
-                response = requests.get(
-                    download_link,
-                    headers=headers,
-                    allow_redirects=True,
-                    stream=True
-                )
-                response.raise_for_status()
-                
-                # Get the file size from headers
-                total_size = int(response.headers.get('content-length', 0))
-                
-                save_path = checkpoints_path.joinpath(model_name)
-
-                # Create progress bar and save model
-                with open(save_path, 'wb') as f, tqdm(
-                    desc=model_name,
-                    total=total_size,
-                    unit='iB',
-                    unit_scale=True,
-                    unit_divisor=1024,
-                ) as pbar:
-                    for chunk in response.iter_content(chunk_size=8192):
-                        size = f.write(chunk)
-                        pbar.update(size)
-                        
-                log_to_console(f"Successfully downloaded {model_name} and saved to checkpoints directory.")
-                
-            except requests.exceptions.RequestException as e:
-                log_to_console(f"Error downloading file: {e}")
-                raise
 
     def link_processor(self, link:str)->str:
         pattern = r'https://civitai.com/models/(\d+)(?:/|(?:\?modelVersionId=\d+))'
         match = re.search(pattern, link)
         if match:
             model_id = match.group(1)
+            return model_id
         else:
             logger.log(level=30, msg=f"[{PACK_NAME}'s Nodes] : model_id not found in given URL")
-            raise
-
-        return model_id
+            return None
 
     def execute(self, civitAI_model_link:str) -> dict:
         model_names = []
 
         try:
-            url = f"https://civitai.com/api/v1/models/{self.link_processor(civitAI_model_link)}"
-            response = requests.get(url, headers={"Accept":"application/json"})
-            response.raise_for_status()
-            
-            response_json = response.json()
+            if (link:=self.link_processor(civitAI_model_link)) is not None:
+                url = f"https://civitai.com/api/v1/models/{link}"
+                response = requests.get(url, headers={"Accept":"application/json"}, timeout=(5, 15))
+                response.raise_for_status()
 
-            for value in response_json["modelVersions"]:
-                model_info = {
-                    "id": value["id"],
-                    "name": value["files"][0]["name"],
-                    "type": value["files"][0]["type"],
-                    "metadata": value["files"][0]["metadata"],
-                    "dl_link": value["files"][0]["downloadUrl"]
-                }
-                if all(key in value["files"][0]["metadata"] for key in ("format", "size", "fp")):
-                    model_info["download_url"] = value["files"][0]["downloadUrl"] + f"?type={value['files'][0]['type']}" + f"&format={value['files'][0]['metadata']['format']}" + f"&size={value['files'][0]['metadata']['size']}" + f"&fp={value['files'][0]['metadata']['fp']}"
-                else:
-                    continue
-                model_names.append(model_info)    
+                response_json = response.json()
+
+                for value in response_json["modelVersions"]:
+                    model_info = {
+                        "id": value["id"],
+                        "name": value["files"][0]["name"],
+                        "type": value["files"][0]["type"],
+                        "metadata": value["files"][0]["metadata"],
+                        "dl_link": value["files"][0]["downloadUrl"]
+                    }
+                    if all(key in value["files"][0]["metadata"] for key in ("format", "size", "fp")):
+                        model_info["download_url"] = value["files"][0]["downloadUrl"] + f"?type={value['files'][0]['type']}" + f"&format={value['files'][0]['metadata']['format']}" + f"&size={value['files'][0]['metadata']['size']}" + f"&fp={value['files'][0]['metadata']['fp']}"
+                    else:
+                        continue
+                    model_names.append(model_info)
+        except requests.exceptions.Timeout:
+            log_to_console("Request to CivitAI timed out, please retry...")
 
         except Exception as e:
             log_to_console(f"Error in model_downloader: {str(e)}")  # Debug log
@@ -991,8 +941,8 @@ class ModelManager:
             },
             "result" : (str(model_names), str([m["download_url"] for m in model_names]))
         }
-   
-    
+
+
 class OllamaVision:
 
     @classmethod
@@ -1003,9 +953,9 @@ class OllamaVision:
                 "seed" : ("INT", {"forceInput":True}),
                 "clip" : ("CLIP",),
                 "randomness" : ("FLOAT", {"default":0.7, "min":0, "max": 1, "step":0.1, "display":"slider"}),
-                "host" : (["Sarthak PC", "Sridhar PC"],),
+                "host" : (["Sarthak PC", "Sridhar PC", "Krishna PC", "Localhost"],),
                 "prompt" : ("STRING", {"default":"Describe the image", "multiline":True})
-            }, 
+            },
             "optional" : {
                 "opt_model_name" : ("STRING", {"default":"llama3.2-vision:latest", "tooltip":"an optional input, write the name of ollama model you wanna use!!"})
             }
@@ -1015,10 +965,10 @@ class OllamaVision:
     CATEGORY = PACK_NAME
     FUNCTION = 'execute'
 
-    def execute(self, 
-                    image:torch.Tensor, 
+    def execute(self,
+                    image:torch.Tensor,
                     seed:int,
-                    clip:object, 
+                    clip:object,
                     prompt:str,
                     randomness:float,
                     host:str,
@@ -1031,12 +981,14 @@ class OllamaVision:
             log_to_console("OllamaVision will only generate text for 1st image in the batch, ignoring others...")
             image = image[0]
         image_b64:bytes = tensor2base64(image)
-        log_to_console(f"Converted tensor image to base64")
+        log_to_console("Converted tensor image to base64")
 
         start_time = time.time()
         client, config_data = config_loader()
-        host_name = host.split()[0].lower()
-        ip_address = config_data.distinct(host_name)[0]
+        if (host_name := host.split()[0].lower()) == "localhost":
+            ip_address = host_name
+        else:
+            ip_address = config_data.distinct(host_name)[0]
 
         llm = ChatOllama(model=opt_model_name, base_url=f'http://{ip_address}:11434', temperature=randomness)
         chain = prompt_func | llm | StrOutputParser()
@@ -1049,13 +1001,13 @@ class OllamaVision:
         output = clip.encode_from_tokens(tokens, return_pooled=True, return_dict=True)
         cond = output.pop("cond")
         client.close()
-        
+
         # db_obj = IamME_Database()
         # db_obj.update_db(input_prompt=prompt, output_prompt=response)
         # db_obj.merge_DB()
 
         log_to_console("Node executed!!")
-        return (response, [[cond, output]],)   
+        return (response, [[cond, output]],)
 
 
 class TextTransformer:
@@ -1080,19 +1032,25 @@ class TextTransformer:
     FUNCTION = 'execute'
     CATEGORY = PACK_NAME
 
-    def execute(self, text:str, replace:bool, prepend:str="", append:str="", to_replace:str="", replace_with:str="") -> str:
+    def execute(self,
+        text:str,
+        replace:bool,
+        prepend:str="",
+        append:str="",
+        to_replace:str="",
+        replace_with:str="") -> str:
         text = prepend + " " + text
         text = text + " " + append
 
         if replace:
             text = text.replace(to_replace, replace_with)
 
-        
+
         return (text,)
-      
+
 
 class TriggerWordProcessor:
-    
+
     @classmethod
     def INPUT_TYPES(s):
         return {
@@ -1124,20 +1082,26 @@ class TriggerWordProcessor:
             random.seed(seed)
         random_num = np.random.default_rng(seed)
 
-        trigger_words = ["__background__", "__topwear__", "__bottomwear__", "__pose__", "__region__", "__bodytype__", "__whimsical_pose__"]
+        trigger_words = ["__background__",
+                    "__topwear__",
+                    "__bottomwear__",
+                    "__pose__",
+                    "__region__",
+                    "__bodytype__",
+                    "__whimsical_pose__"]
 
         for word in trigger_words:
             if word not in text_in:
                 log_to_console(f"{word} not found in input text, skipping!!")
                 continue
-            
+
             #background
             if word == "__background__":
                 bg_choice = random_num.choice(bg_options)
                 text_in = text_in.replace(word, bg_choice)
 
             #topwear
-            elif word == "__topwear__":          
+            elif word == "__topwear__":
                 if gender=="male":
                     topwear_choice = random_num.choice(topwear_options["male"])
                 else:
@@ -1145,9 +1109,9 @@ class TriggerWordProcessor:
                 color_choice = random_num.choice(color_options)
                 clothing = f"{color_choice} {topwear_choice} "
                 text_in = text_in.replace(word, clothing)
-            
+
             #bottomwear
-            elif word == "__bottomwear__":          
+            elif word == "__bottomwear__":
                 if gender=="male":
                     bottomwear_choice = random_num.choice(bottomwear_options["male"])
                 else:
@@ -1155,17 +1119,17 @@ class TriggerWordProcessor:
                 color_choice = random_num.choice(color_options)
                 clothing = f"{color_choice} {bottomwear_choice} "
                 text_in = text_in.replace(word, clothing)
-            
+
             #pose
             elif word == "__pose__":
                 pose_choice = random_num.choice(pose_options)
                 text_in = text_in.replace(word, pose_choice)
-            
+
             #pose
             elif word == "__whimsical_pose__":
                 whimsical_pose_choice = random_num.choice(whimsical_pose_options)
                 text_in = text_in.replace(word, whimsical_pose_choice)
-            
+
             #region
             elif word == "__region__":
                 region_choice = random_num.choice(region_options)
@@ -1178,7 +1142,6 @@ class TriggerWordProcessor:
                     body_type_choice = random_num.choice(body_type_options["female"])
                 body_type = f"{body_type_choice} "
                 text_in = text_in.replace(word, body_type)
-            
         return (text_in,)
 
 
@@ -1198,31 +1161,29 @@ class SaveImageAdvanced:
                 "file_name_suffix" : ("STRING", {"default":"", "multiline": True})
             }
         }
-    
     RETURN_TYPES = (any_type,)
     RETURN_NAMES = ("opt",)
     CATEGORY = PACK_NAME
     FUNCTION = "execute"
     OUTPUT_NODE =True
 
-    def execute(self, 
-                   images:torch.Tensor, 
-                   parent_folder:str, 
-                   subfolder_name:str,
-                   overwrite:bool, 
-                   file_name_suffix:str, 
-                   format:str, 
-                   quality:int, 
-                   dpi:int
-                   ) -> tuple:
+    def execute(self,
+                    images:torch.Tensor,
+                    parent_folder:str,
+                    subfolder_name:str,
+                    overwrite:bool,
+                    file_name_suffix:str,
+                    format:str,
+                    quality:int,
+                    dpi:int
+                    ) -> tuple:
         for image in images:
-            i = 255. * image.cpu().numpy() 
+            i = 255. * image.cpu().numpy()
             img = Image.fromarray(np.clip(i, 0, 255).astype(np.uint8))
 
             parent_path = Path(parent_folder)
             if not parent_path.is_dir():
                 raise OSError("Provided parent_path is not a directory!!")
-            
             subfolder_path = parent_path.joinpath(subfolder_name)
 
             subfolder_path.mkdir(exist_ok=True)
@@ -1243,8 +1204,6 @@ class SaveImageAdvanced:
                     else: #png case
                         img.save(save_path, dpi=(dpi, dpi))
         return (file_name,)
-    
-
 
 NODE_CLASS_MAPPINGS = {
     "AspectEmptyLatentImage" : AspectEmptyLatentImage,

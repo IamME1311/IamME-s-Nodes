@@ -100,13 +100,13 @@ def image_hue_offset(image:Image, offset:int) -> Image:
     ret_image = Image.new('L', size=(width, height), color='black')
     for x in range(width):
         for y in range(height):
-                pixel = image.getpixel((x, y))
-                _pixel = pixel + offset
-                if _pixel > 255:
-                    _pixel -= 256
-                if _pixel < 0:
-                    _pixel += 256
-                ret_image.putpixel((x, y), _pixel)
+            pixel = image.getpixel((x, y))
+            _pixel = pixel + offset
+            if _pixel > 255:
+                _pixel -= 256
+            if _pixel < 0:
+                _pixel += 256
+            ret_image.putpixel((x, y), _pixel)
     return ret_image
 
 def image_gray_offset(image:Image, offset:int) -> Image:

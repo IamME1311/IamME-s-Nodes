@@ -1,13 +1,14 @@
 import json
 from pathlib import Path
-import pymongo.collection
+import os
+import logging
 import requests
 import numpy as np
 from colorama import Fore, Style, init
-import logging
 import pymongo
-import os
+import pymongo.collection
 from langchain_core.messages import HumanMessage
+from tqdm import tqdm
 
 
 
@@ -15,10 +16,28 @@ PACK_NAME = "IamME"
 MAX_RESOLUTION = 16384
 ASPECT_CHOICES = ["None","custom",
                     "1:1 (Perfect Square)",
-                    "2:3 (Classic Portrait)", "3:4 (Golden Ratio)", "3:5 (Elegant Vertical)", "4:5 (Artistic Frame)", "5:7 (Balanced Portrait)", "5:8 (Tall Portrait)",
-                    "7:9 (Modern Portrait)", "9:16 (Slim Vertical)", "9:19 (Tall Slim)", "9:21 (Ultra Tall)", "9:32 (Skyline)",
-                    "3:2 (Golden Landscape)", "4:3 (Classic Landscape)", "5:3 (Wide Horizon)", "5:4 (Balanced Frame)", "7:5 (Elegant Landscape)", "8:5 (Cinematic View)",
-                    "9:7 (Artful Horizon)", "16:9 (Panorama)", "19:9 (Cinematic Ultrawide)", "21:9 (Epic Ultrawide)", "32:9 (Extreme Ultrawide)"
+                    "2:3 (Classic Portrait)",
+                    "3:4 (Golden Ratio)",
+                    "3:5 (Elegant Vertical)",
+                    "4:5 (Artistic Frame)",
+                    "5:7 (Balanced Portrait)",
+                    "5:8 (Tall Portrait)",
+                    "7:9 (Modern Portrait)",
+                    "9:16 (Slim Vertical)",
+                    "9:19 (Tall Slim)",
+                    "9:21 (Ultra Tall)",
+                    "9:32 (Skyline)",
+                    "3:2 (Golden Landscape)",
+                    "4:3 (Classic Landscape)",
+                    "5:3 (Wide Horizon)",
+                    "5:4 (Balanced Frame)",
+                    "7:5 (Elegant Landscape)",
+                    "8:5 (Cinematic View)",
+                    "9:7 (Artful Horizon)",
+                    "16:9 (Panorama)",
+                    "19:9 (Cinematic Ultrawide)",
+                    "21:9 (Epic Ultrawide)",
+                    "32:9 (Extreme Ultrawide)"
                 ]
 
 IMAGE_DATA = {"type":"image_data", "name":"image data"}
@@ -67,7 +86,6 @@ def config_loader() -> tuple[pymongo.MongoClient, pymongo.collection.Collection]
 
     try:
         mongo_client.admin.command("ping")
-    
     except Exception as e:
         log_to_console(f"Can't connect to MongoDB : {e}")
 
@@ -92,6 +110,59 @@ def prompt_func(data):
     content_parts.append(text_part)
 
     return [HumanMessage(content=content_parts)]
+
+def download_model_with_progress(download_link: str, model_name: str) -> None:
+    this_file_path = Path(__file__)
+    checkpoints_path = this_file_path.parent.parent.parent.joinpath("models/checkpoints")
+
+    if not checkpoints_path.exists() and checkpoints_path.is_dir():
+        raise ValueError("Checkpoints folder path not found!!")
+
+    if model_name in [model.name for model in checkpoints_path.iterdir()]:
+        log_to_console("Model already present in checkpoints folder, aborting download!!")
+
+    else:
+        log_to_console(f"Starting download for {model_name}..")
+        civitai_auth_token = "dde477748946d47366ce09db94b81584"
+        headers = {
+            "Authorization": f"Bearer {civitai_auth_token}"
+        }
+
+        if not model_name.endswith('.safetensors'):
+            model_name = f"{model_name}.safetensors"
+
+        try:
+            response = requests.get(
+                download_link,
+                headers=headers,
+                allow_redirects=True,
+                stream=True,
+                timeout=(5,45)
+            )
+            response.raise_for_status()
+
+            # Get the file size from headers
+            total_size = int(response.headers.get('content-length', 0))
+
+            save_path = checkpoints_path.joinpath(model_name)
+
+            # Create progress bar and save model
+            with open(save_path, 'wb') as f, tqdm(
+                desc=model_name,
+                total=total_size,
+                unit='iB',
+                unit_scale=True,
+                unit_divisor=1024,
+            ) as pbar:
+                for chunk in response.iter_content(chunk_size=8192):
+                    size = f.write(chunk)
+                    pbar.update(size)
+
+            log_to_console(f"Successfully downloaded {model_name} and saved to checkpoints directory.")
+
+        except requests.exceptions.RequestException as e:
+            log_to_console(f"Error downloading file: {e}")
+            raise
 
 # thanks to pythongossss..
 class AnyType(str):
