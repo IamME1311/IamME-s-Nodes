@@ -5,3 +5,4 @@ pyyaml
 langchain-ollama
 langchain-core
 pymongo
+colorama
