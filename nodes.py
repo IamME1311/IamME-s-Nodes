@@ -675,10 +675,13 @@ class GeminiVision:
             "required" : {
                 "image" : ("IMAGE",),
                 "seed" : ("INT", {"forceInput":True}),
-                "clip" : ("CLIP",),
+                
                 "randomness" : ("FLOAT", {"default":0.7, "min":0, "max": 1, "step":0.1, "display":"slider"}),
                 "api_key" : ("STRING", {"default":""}),
                 "prompt" : ("STRING", {"default":"Describe the image", "multiline":True})
+            },
+            "optional" : {
+                "clip" : ("CLIP",),
             }
         }
 
@@ -689,10 +692,10 @@ class GeminiVision:
     def execute(self,
                    image:torch.Tensor,
                    seed:int,
-                   clip:object,
                    randomness:float,
                    prompt:str,
                    api_key:str,
+                   clip:object=None,
                    ) -> tuple[str, list]:
 
         pil_image = tensor2pil(image)
@@ -703,10 +706,12 @@ class GeminiVision:
             raise f"Error configuring gemini model : {e}"
         llm = genai.GenerativeModel(model_name="gemini-1.5-flash", generation_config=genai.GenerationConfig(temperature=randomness))
         response = llm.generate_content([pil_image, prompt])
-        tokens = clip.tokenize(response.text)
-        output = clip.encode_from_tokens(tokens, return_pooled=True, return_dict=True)
-        cond = output.pop("cond")
-
+        if clip is not None:
+            tokens = clip.tokenize(response.text)
+            output = clip.encode_from_tokens(tokens, return_pooled=True, return_dict=True)
+            cond = output.pop("cond")
+        else:
+            cond=output=None
         # db_obj = IamME_Database()
         # db_obj.update_db(input_prompt=prompt, output_prompt=response.text)
         # db_obj.merge_DB()
@@ -957,6 +962,7 @@ class OllamaVision:
                 "prompt" : ("STRING", {"default":"Describe the image", "multiline":True})
             },
             "optional" : {
+                "clip" : ("CLIP",),
                 "opt_model_name" : ("STRING", {"default":"llama3.2-vision:latest", "tooltip":"an optional input, write the name of ollama model you wanna use!!"})
             }
         }
@@ -968,10 +974,10 @@ class OllamaVision:
     def execute(self,
                     image:torch.Tensor,
                     seed:int,
-                    clip:object,
                     prompt:str,
                     randomness:float,
                     host:str,
+                    clip:object=None,
                     opt_model_name:str = "llama3.2-vision:latest"
                     ) -> tuple[str, list]:
 
@@ -997,9 +1003,12 @@ class OllamaVision:
 
         log_to_console(f"generated response, time taken = {end_time-start_time:.2f} seconds")
 
-        tokens = clip.tokenize(response)
-        output = clip.encode_from_tokens(tokens, return_pooled=True, return_dict=True)
-        cond = output.pop("cond")
+        if clip is not None:
+            tokens = clip.tokenize(response)
+            output = clip.encode_from_tokens(tokens, return_pooled=True, return_dict=True)
+            cond = output.pop("cond")
+        else:
+            cond=output=None
         client.close()
 
         # db_obj = IamME_Database()
