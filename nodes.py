@@ -1213,6 +1213,26 @@ class SaveImageAdvanced:
                     else: #png case
                         img.save(save_path, dpi=(dpi, dpi))
         return (file_name,)
+    
+
+class Slider:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "value": ("FLOAT", { "display": "slider", "default": 50.0, "min": 0.0, "max": 100.0, "step": 5.0 }),
+            },
+        }
+
+    RETURN_TYPES = ("FLOAT","INT",)
+    FUNCTION = "execute"
+    CATEGORY = PACK_NAME
+
+    def execute(self, value):
+        value = float(value)
+
+        return (value, int(value))
+
 
 NODE_CLASS_MAPPINGS = {
     "AspectEmptyLatentImage" : AspectEmptyLatentImage,
@@ -1224,6 +1244,7 @@ NODE_CLASS_MAPPINGS = {
     "GetImageData": GetImageData,
     "ImageBatchLoader": ImageBatchLoader,
     "LiveTextEditor": LiveTextEditor,
+    "IamSlider": Slider, 
     "ModelManager" : ModelManager,
     "OllamaVision": OllamaVision,
     "TriggerWordProcessor" : TriggerWordProcessor,
@@ -1241,6 +1262,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "GetImageData": PACK_NAME + " GetImageData",
     "ImageBatchLoader": PACK_NAME + " ImageBatchLoader",
     "LiveTextEditor" : PACK_NAME + " LiveTextEditor",
+    "IamSlider": PACK_NAME + " Slider", 
     "ModelManager" : PACK_NAME + " ModelManager",
     "OllamaVision": PACK_NAME + " OllamaVision",
     "TriggerWordProcessor" : PACK_NAME + " TriggerWordProcessor",   
