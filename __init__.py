@@ -1,9 +1,26 @@
-from .nodes import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS, log_to_console, Path
+from .py.utils import log_to_console, Path
 import os
 import filecmp
 import shutil
 import __main__
+import importlib
 
+
+
+
+cwd = Path(__file__).parent
+modules_path = cwd.joinpath("py")
+
+forbidden_imports = ("blendmodes", "utils", "image_utils")
+
+NODE_CLASS_MAPPINGS = dict()
+NODE_DISPLAY_NAME_MAPPINGS = dict()
+
+for module in modules_path.iterdir():
+    if module.is_file() and module.suffix == ".py" and module.stem not in forbidden_imports:
+        module_obj = importlib.import_module(f".py.{module.stem}", package=__name__)
+        NODE_CLASS_MAPPINGS.update(**module_obj.NODE_CLASS_MAPPINGS)
+        NODE_DISPLAY_NAME_MAPPINGS.update(**module_obj.NODE_DISPLAY_NAME_MAPPINGS)
 
 
 
