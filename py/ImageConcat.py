@@ -10,13 +10,14 @@ class ImageConcatenate:
             "image1": ("IMAGE",),
             "image2": ("IMAGE",),
             "direction": (
-                ["right", "down", "left", "up"],
+                ["right", "left",],
                 {"default": "right"}
             ),
             "match_image_size": ("BOOLEAN", {"default": True}),
         }}
 
-    RETURN_TYPES = ("IMAGE", )
+    RETURN_TYPES = ("IMAGE", "INT", "INT", "INT",)
+    RETURN_NAMES = ("IMAGE", "WIDTH_OUT", "HEIGHT_OUT", "X_OFF",)
     FUNCTION = "execute"
     CATEGORY = PACK_NAME
     DESCRIPTION = """
@@ -75,9 +76,13 @@ Concatenates the second image to the first image in the specified direction. Opt
             concatenated_image = torch.cat((image2_resized, image1), dim=2)  # Concatenate along width with image2 on the left
         elif direction == "up":
             concatenated_image = torch.cat((image2_resized, image1), dim=1)  # Concatenate along height with image2 on top
+        
+        out_width = concatenated_image.shape[2] - image1.shape[2] # with of cropped image
+        out_height = concatenated_image.shape[1] # height of second image
+        out_x_off = image1.shape[2] # width of first image
 
         # Step 4: Return the concatenated image
-        return concatenated_image,
+        return (concatenated_image, out_width, out_height, out_x_off,)
 
 NODE_CLASS_MAPPINGS = {
     "ImageConcatenate": ImageConcatenate
