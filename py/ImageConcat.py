@@ -77,12 +77,12 @@ Concatenates the second image to the first image in the specified direction. Opt
         elif direction == "up":
             concatenated_image = torch.cat((image2_resized, image1), dim=1)  # Concatenate along height with image2 on top
         
-        out_width = concatenated_image.shape[2] - image1.shape[2] # with of cropped image
-        out_height = concatenated_image.shape[1] # height of second image
-        out_x_off = image1.shape[2] # width of first image
+        width = concatenated_image.shape[2] - image1.shape[2] # with of cropped image
+        height = concatenated_image.shape[1] # height of second image
+        x_off = image1.shape[2] # width of first image
 
         # Step 4: Return the concatenated image
-        return (concatenated_image, out_width, out_height, out_x_off,)
+        return (concatenated_image, width, height, x_off,)
 
 NODE_CLASS_MAPPINGS = {
     "ImageConcatenate": ImageConcatenate
