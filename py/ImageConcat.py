@@ -54,19 +54,13 @@ Concatenates the second image to the first image in the specified direction. Opt
                 target_height
             ).movedim(1, -1)  # Convert back to (B, H, W, C) format
         else:
-            ########################################
-            #               WIP                    #
-            ########################################
             pad_top = pad_left = pad_right = pad_bottom = 0
-            ratio = min(target_width / original_width, target_height / original_height)
-            new_width = round(original_width*ratio)
-            new_height = round(original_height*ratio)
-            
-            pad_left = (target_width - new_width) // 2
-            pad_right = target_width - new_width - pad_left
-            pad_top = (target_height - new_height) // 2
-            pad_bottom = target_height - new_height - pad_top
 
+            if image2.shape[1]>image1.shape[1]:
+                raise ValueError("image2's height is greater than image1, can't pad!!")
+            else:
+                pad_top = (target_height - original_height) // 2
+                pad_bottom = target_height - original_height - pad_top
             outputs = image2.permute(0,3,1,2)
             if pad_left > 0 or pad_right > 0 or pad_top > 0 or pad_bottom > 0:
                 outputs = F.pad(outputs, (pad_left, pad_right, pad_top, pad_bottom), value=0)
