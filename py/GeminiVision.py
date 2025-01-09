@@ -7,6 +7,7 @@ class GeminiVision:
     def INPUT_TYPES(s):
         return {
             "required" : {
+                ""
                 "image" : ("IMAGE",),
                 "seed" : ("INT", {"forceInput":True}),
                 "randomness" : ("FLOAT", {"default":0.7, "min":0, "max": 1, "step":0.1, "display":"slider"}),
@@ -14,10 +15,12 @@ class GeminiVision:
                 "prompt" : ("STRING", {"default":"Describe the image", "multiline":True})
             },
             "optional" : {
+                "image2":("IMAGE",),
                 "clip" : ("CLIP",),
+                "video":("VIDEO")
             }
         }
-
+ 
     RETURN_TYPES = ("STRING", "CONDITIONING", )
     CATEGORY = PACK_NAME
     FUNCTION = 'execute'
@@ -28,7 +31,9 @@ class GeminiVision:
                    randomness:float,
                    prompt:str,
                    api_key:str,
+                   image2:torch.Tensor=None,
                    clip:object|None = None,
+                   video=None
                    ) -> tuple[str, list]:
 
         pil_image = tensor2pil(image)
@@ -38,7 +43,12 @@ class GeminiVision:
         except Exception as e:
             raise f"Error configuring gemini model : {e}"
         llm = genai.GenerativeModel(model_name="gemini-1.5-flash", generation_config=genai.GenerationConfig(temperature=randomness))
-        response = llm.generate_content([pil_image, prompt])
+        if image2 is not None:
+            pil_image2 = tensor2pil(image2)
+            llm_input = [pil_image, pil_image2, prompt]
+        else:
+            llm_input = [pil_image, prompt]
+        response = llm.generate_content(llm_input)
         if clip is not None:
             tokens = clip.tokenize(response.text)
             output = clip.encode_from_tokens(tokens, return_pooled=True, return_dict=True)
