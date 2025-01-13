@@ -10,6 +10,13 @@ class llm_vision:
     def __init__(self):
         self.input_dir = folder_paths.get_input_directory()
 
+    @staticmethod
+    def get_host_IP() -> str:
+        client, collection = config_loader()
+        host_IP = collection.distinct("sarthak")
+        client.close()
+        return host_IP
+    
     @classmethod
     def INPUT_TYPES(s):
         input_dir = folder_paths.get_input_directory()
@@ -31,7 +38,8 @@ class llm_vision:
     def execute(self, seed, model_type, image, prompt):
         debug  = image # this image is saved to input folder
         image_path = os.path.join(self.input_dir, image)
-        response = requests.post(f"http://192.168.0.83:8000/model/{model_type}/generate", 
+        host_IP = llm_vision.get_host_IP()
+        response = requests.post(f"http://{host_IP}:8000/model/{model_type}/generate", 
                          headers={"accept":"application/json"},
                          files=[("uploaded_images", (image, open(image_path, "rb"), "image/png"))],
                          params={"prompt": prompt}
