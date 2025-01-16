@@ -7,17 +7,18 @@ class GeminiVision:
     def INPUT_TYPES(s):
         return {
             "required" : {
-                ""
-                "image" : ("IMAGE",),
+                "mode" : (["Image", "Video"], {"default" : "Image"},),
+                "model_name" : (["gemini-1.5-flash", "gemini-2.0-flash-exp"], {"default":"gemini-1.5-flash"}),
                 "seed" : ("INT", {"forceInput":True}),
                 "randomness" : ("FLOAT", {"default":0.7, "min":0, "max": 1, "step":0.1, "display":"slider"}),
                 "api_key" : ("STRING", {"default":""}),
                 "prompt" : ("STRING", {"default":"Describe the image", "multiline":True})
             },
             "optional" : {
+                "image" : ("IMAGE",),
                 "image2":("IMAGE",),
                 "clip" : ("CLIP",),
-                "video":("VIDEO")
+                "video_path":("STRING", {"default":"", "tooltip":"The path of the video file, only supports LOCAL FILES."})
             }
         }
  
@@ -26,29 +27,43 @@ class GeminiVision:
     FUNCTION = 'execute'
 
     def execute(self,
-                   image:torch.Tensor,
+                   mode:str,
+                   model_name:str,
                    seed:int,
                    randomness:float,
                    prompt:str,
                    api_key:str,
+                   image:torch.Tensor=None,
                    image2:torch.Tensor=None,
                    clip:object|None = None,
-                   video=None
+                   video_path:str=None
                    ) -> tuple[str, list]:
-
-        pil_image = tensor2pil(image)
-
         try:
             genai.configure(api_key=api_key)
         except Exception as e:
             raise f"Error configuring gemini model : {e}"
-        llm = genai.GenerativeModel(model_name="gemini-1.5-flash", generation_config=genai.GenerationConfig(temperature=randomness))
-        if image2 is not None:
-            pil_image2 = tensor2pil(image2)
-            llm_input = [pil_image, pil_image2, prompt]
-        else:
-            llm_input = [pil_image, prompt]
-        response = llm.generate_content(llm_input)
+        llm = genai.GenerativeModel(model_name=model_name, generation_config=genai.GenerationConfig(temperature=randomness))
+
+        if mode.lower() == "image":
+            tensor_images = [image, image2]
+            llm_input = [*tensor_batch2pil(tensor_images), prompt]
+            log_to_console("converted tensor images to list of pil images..", 20)
+            response = llm.generate_content(llm_input)
+
+        elif mode.lower() == "video":
+            video_path = video_path.replace("\"", "")
+            video_path = Path(video_path)
+            log_to_console("uploading video file to file server")
+            video_file = genai.upload_file(video_path)
+            while video_file.state.name == "PROCESSING":
+                time.sleep(10)
+                video_file = genai.get_file(video_file.name)
+            if video_file.state.name=="FAILED":
+                log_to_console("video file upload failed", 40)
+                raise ValueError(f"video file upload {video_file.state.name}")
+            
+            response = llm.generate_content([video_file, prompt], request_options={"timeout":600})
+            # video_file.delete()
         if clip is not None:
             tokens = clip.tokenize(response.text)
             output = clip.encode_from_tokens(tokens, return_pooled=True, return_dict=True)

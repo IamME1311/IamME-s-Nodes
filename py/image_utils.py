@@ -178,3 +178,12 @@ def tensor2base64(image:torch.Tensor) -> bytes:
     img.save(buffered, format="PNG")
     img_bytes = base64.b64encode(buffered.getvalue()).decode("utf-8")
     return img_bytes
+
+def tensor_batch2pil(images:list) -> list:
+    batch_size = len(images) # shape is in format of [batch_size, height, width, channel_count]
+    pil_images = []
+    for index in range(batch_size):
+        if images[index]==None:
+            continue
+        pil_images.append(tensor2pil(images[index]))
+    return pil_images
