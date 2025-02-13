@@ -25,7 +25,7 @@ class llm_vision:
             "required" : {
                 "image" : (sorted(files), {"image_upload":True}),
                 "seed" : ("INT", {"forceInput":True}),
-                "model_type" : (["llama", "gemini"], {"default":"gemini"}),
+                "model_type" : (["llama", "gemini", "janus"], {"default":"gemini"}),
                 "prompt" : ("STRING", {"defualt":"", "multiline":True})
             }
         }

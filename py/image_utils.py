@@ -1,6 +1,7 @@
 import base64
 import io
-from PIL import Image, ImageEnhance, ImageChops
+from PIL import Image, ImageEnhance, ImageChops, ImageFilter
+import scipy.ndimage
 import cv2
 import torch
 import numpy as np
@@ -35,7 +36,37 @@ def cv22pil(cv2_img:np.ndarray) -> Image:
     cv2_img = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2RGB)
     return Image.fromarray(cv2_img)
 
+def image2mask(image:Image) -> torch.Tensor:
+    if image.mode == 'L':
+        return torch.tensor([pil2tensor(image)[0, :, :].tolist()])
+    else:
+        image = image.convert('RGB').split()[0]
+        return torch.tensor([pil2tensor(image)[0, :, :].tolist()])
 
+def expand_mask(mask:torch.Tensor, grow:int, blur:int) -> torch.Tensor:
+    # grow
+    c = 0
+    kernel = np.array([[c, 1, c],
+                       [1, 1, 1],
+                       [c, 1, c]])
+    growmask = mask.reshape((-1, mask.shape[-2], mask.shape[-1]))
+    out = []
+    for m in growmask:
+        output = m.numpy()
+        for _ in range(abs(grow)):
+            if grow < 0:
+                output = scipy.ndimage.grey_erosion(output, footprint=kernel)
+            else:
+                output = scipy.ndimage.grey_dilation(output, footprint=kernel)
+        output = torch.from_numpy(output)
+        out.append(output)
+    # blur
+    for idx, tensor in enumerate(out):
+        pil_image = tensor2pil(tensor.cpu().detach())
+        pil_image = pil_image.filter(ImageFilter.GaussianBlur(blur))
+        out[idx] = pil2tensor(pil_image)
+    ret_mask = torch.cat(out, dim=0)
+    return ret_mask
 
 
 def color_balance(image:Image, shadows:list, midtones:list, highlights:list,
