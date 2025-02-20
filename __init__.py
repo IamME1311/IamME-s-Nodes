@@ -11,13 +11,13 @@ import importlib
 cwd = Path(__file__).parent
 modules_path = cwd.joinpath("py")
 
-forbidden_imports = ("blendmodes", "utils", "image_utils")
+forbidden_imports = ("blendmodes", "utils", "image_utils", "ollamavision")
 
 NODE_CLASS_MAPPINGS = dict()
 NODE_DISPLAY_NAME_MAPPINGS = dict()
 
 for module in modules_path.iterdir():
-    if module.is_file() and module.suffix == ".py" and module.stem not in forbidden_imports:
+    if module.is_file() and module.suffix == ".py" and module.stem.lower() not in forbidden_imports:
         module_obj = importlib.import_module(f".py.{module.stem}", package=__name__)
         NODE_CLASS_MAPPINGS.update(**module_obj.NODE_CLASS_MAPPINGS)
         NODE_DISPLAY_NAME_MAPPINGS.update(**module_obj.NODE_DISPLAY_NAME_MAPPINGS)

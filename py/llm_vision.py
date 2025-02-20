@@ -50,7 +50,7 @@ class llm_vision:
     
 
 
-NODE_CLASS_MAPPINGS = {"LLM Vision":llm_vision}
+NODE_CLASS_MAPPINGS = {"LLM Vision" : llm_vision}
 NODE_DISPLAY_NAME_MAPPINGS = {"LLM Vision" : PACK_NAME + " LLM Vision"}
 
 #reference request code
