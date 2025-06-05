@@ -8,7 +8,7 @@ class GeminiVision:
         return {
             "required" : {
                 "mode" : (["Image", "Video"], {"default" : "Image"},),
-                "model_name" : (["gemini-1.5-flash", "gemini-2.0-flash-exp"], {"default":"gemini-1.5-flash"}),
+                "model_name" : (["gemini-1.5-flash", "gemini-2.0-flash-exp", "gemini-2.5-flash-preview-05-20"], {"default":"gemini-2.5-flash-preview-05-20"}),
                 "seed" : ("INT", {"forceInput":True}),
                 "randomness" : ("FLOAT", {"default":0.7, "min":0, "max": 1, "step":0.1, "display":"slider"}),
                 "api_key" : ("STRING", {"default":""}),
