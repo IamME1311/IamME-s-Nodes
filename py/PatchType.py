@@ -1,4 +1,4 @@
-from .utils import PACK_NAME
+from .utils import PACK_NAME, any_type
 
 class Patch_Type:
     @classmethod
@@ -13,7 +13,7 @@ class Patch_Type:
     
     CATEGORY = PACK_NAME
     FUNCTION = "execute"
-    RETURN_TYPES = ("STRING",)
+    RETURN_TYPES = (any_type,)
     RETURN_NAMES = ("patch_type",)
 
     def execute(self, patch_type:str):

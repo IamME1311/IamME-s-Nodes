@@ -166,7 +166,8 @@ def download_model_with_progress(download_link: str, model_name: str) -> None:
             log_to_console(f"Error downloading file: {e}")
             raise
 
-# thanks to pythongossss..
+            
+ # thanks to pythongossss..
 class AnyType(str):
 
     def __eq__(self, _) -> bool:
