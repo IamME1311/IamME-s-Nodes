@@ -2,6 +2,8 @@ import torch
 import google.generativeai as genai
 from .utils import *
 from .image_utils import *
+
+
 class GeminiVision:
     @classmethod
     def INPUT_TYPES(s):

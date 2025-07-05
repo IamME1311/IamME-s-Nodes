@@ -6,3 +6,6 @@ langchain-ollama
 langchain-core
 pymongo
 colorama
+requests>=2.28.0
+Pillow>=9.0.0
+numpy
