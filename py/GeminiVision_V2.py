@@ -4,7 +4,7 @@ from PIL import Image
 from .utils import *
 from .image_utils import *
 
-class GeminiVision:
+class GeminiVisionV2:
     @classmethod
     def INPUT_TYPES(s):
         return {
@@ -113,5 +113,5 @@ class GeminiVision:
         return (response.text,)
 
 
-NODE_CLASS_MAPPINGS = {"GeminiVision": GeminiVision}
-NODE_DISPLAY_NAME_MAPPINGS = {"GeminiVision": PACK_NAME + " GeminiVision_V2"}
+NODE_CLASS_MAPPINGS = {"Gem_Chat": GeminiVisionV2}
+NODE_DISPLAY_NAME_MAPPINGS = {"Gem_chat": PACK_NAME + "Gem_chat"}
