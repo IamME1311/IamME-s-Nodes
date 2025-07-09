@@ -1,5 +1,5 @@
 import random
-from.utils import *
+from..py.utils import *
 
 class TriggerWordProcessor:
 

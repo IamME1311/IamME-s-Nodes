@@ -1,4 +1,4 @@
-from .utils import *
+from ..py.utils import *
 class LiveTextEditor:
 
     @classmethod

@@ -1,5 +1,5 @@
 from .utils import *
-
+# have 360 deg slider
 class Slider:
     @classmethod
     def INPUT_TYPES(s):

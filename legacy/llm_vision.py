@@ -2,7 +2,7 @@ import requests
 import os
 
 import folder_paths
-from .utils import *
+from ..py.utils import *
 
 
 

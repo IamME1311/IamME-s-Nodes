@@ -228,6 +228,50 @@ app.registerExtension({
           });
         };
         break;
+      
+      // case "Gem_Chat":
+      //   nodeType.prototype.onNodeCreated = function () {
+      //     // this._type = "IMAGE";
+      //     // this.inputs_offset = nodeData.name.includes("selective") ? 1 : 0;
+      //     let sesh_id = null;
+      //     this.addWidget("button", "Reset Context", null, () => {
+      //       for (const widget of this.widgets) {
+      //         if (
+      //           widget.name === "session_id"
+      //         ) {
+      //           sesh_id = widget.value;
+      //           console.log("sesh_id=", sesh_id);
+      //         }
+      //       }
+      //       return api
+      //         .fetchApi("/reset_context", {
+      //           method: "POST",
+      //           headers: {
+      //             "Content-Type": "application/json",
+      //           },
+      //           body: JSON.stringify({
+      //             reset_context: true,
+      //             session_id: sesh_id, 
+      //             model_name: "gemini-2.5-flash-preview-05-20",
+      //             system_inst : "You are a professional AI assistant that writes elegant, highly realistic photography prompts for luxury watch product shots."
+
+      //           }),
+      //         })
+      //         .then((response) => {
+      //           if (!response.ok) {
+      //             throw new Error("reset context failed");
+      //           }
+      //           console.log(`message from python: ${response.message}`);
+      //         })
+      //         .catch((error) => {
+      //           console.error(`Error downloading model try: ${error}`);
+      //         });
+
+      //        // Force a node update if needed
+      //       this.onNodeChanged?.(); // or this.onPropertyChanged?.();
+      //     });
+      //   };
+      //   break;
 
       case "ConnectionBus":
         const onConnectionsChange = nodeType.prototype.onConnectionsChange;

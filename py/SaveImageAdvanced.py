@@ -22,7 +22,7 @@ class SaveImageAdvanced:
     CATEGORY = PACK_NAME
     FUNCTION = "execute"
     OUTPUT_NODE =True
-
+# modify for click button
     def execute(self,
                     images:torch.Tensor,
                     parent_folder:str,

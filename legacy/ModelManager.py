@@ -1,7 +1,7 @@
 import re
 from aiohttp import web
 from server import PromptServer
-from .utils import *
+from ..py.utils import *
 
 class ModelManager:
     def __init__(self):

@@ -218,3 +218,17 @@ def tensor_batch2pil(images:list) -> list:
             continue
         pil_images.append(tensor2pil(images[index]))
     return pil_images
+
+def tensor_to_cv2(tensor: torch.Tensor) -> np.ndarray:
+    """Converts a ComfyUI-style tensor (B, H, W, C) [0,1] to an OpenCV-style BGR uint8 image (H, W, C) [0,255]."""
+    img_tensor = tensor[0]
+    img_np = np.clip(255. * img_tensor.cpu().numpy(), 0, 255).astype(np.uint8)
+    img_bgr = cv2.cvtColor(img_np, cv2.COLOR_RGB2BGR)
+    return img_bgr
+
+def cv2_to_tensor(image: np.ndarray) -> torch.Tensor:
+    """Converts an OpenCV-style BGR uint8 image (H, W, C) [0,255] to a ComfyUI-style tensor (B, H, W, C) [0,1]."""
+    img_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    img_float = img_rgb.astype(np.float32) / 255.0
+    tensor = torch.from_numpy(img_float).unsqueeze(0)
+    return tensor

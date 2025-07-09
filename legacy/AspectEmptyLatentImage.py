@@ -1,7 +1,7 @@
 import math
 import torch
 import comfy
-from .utils import *
+from ..py.utils import *
 
 class AspectEmptyLatentImage:
     def __init__(self) -> None:
