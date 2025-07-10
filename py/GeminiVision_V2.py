@@ -220,7 +220,7 @@ class GeminiVisionV2:
         session_id = data["session_id"]
         session_key = self.get_session_key(
             model_name=data["model_name"], system_instruction=data["system_inst"], session_id=session_id
-        )
+        ) 
 
         # Reset context if requested
         if reset_context and session_key in self._chat_sessions:
